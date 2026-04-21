@@ -1,6 +1,6 @@
 {
-  "version": "emos-auto-20260421122743",
-  "trained_at": "2026-04-21T12:28:05.031165+00:00",
+  "version": "emos-auto-20260421121920",
+  "trained_at": "2026-04-21T12:19:38.887631+00:00",
   "global": {
     "mu": {
       "intercept": 0.34330438,
@@ -357,5 +357,5 @@
     "settlement_history_city_count": 30,
     "legacy_archive_samples": 54
   },
-  "source": "artifacts\\local_runtime\\probability_calibration\\candidates\\emos-auto-20260421122743\\default.json"
+  "source": "artifacts\\local_runtime\\probability_calibration\\candidates\\emos-auto-20260421121920\\default.json"
 }
