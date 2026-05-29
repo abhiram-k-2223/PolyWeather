@@ -20,12 +20,11 @@ export async function GET(req: NextRequest) {
     const auth = await buildBackendRequestHeaders(req);
     const authError = requireOpsProxyAuth(req, auth);
     if (authError) return authError;
-
-    const url = new URL(`${API_BASE}/api/ops/users`);
-    const q = req.nextUrl.searchParams.get("q");
+    const url = new URL(`${API_BASE}/api/ops/memberships/overview`);
     const limit = req.nextUrl.searchParams.get("limit");
-    if (q) url.searchParams.set("q", q);
+    const days = req.nextUrl.searchParams.get("days");
     if (limit) url.searchParams.set("limit", limit);
+    if (days) url.searchParams.set("days", days);
 
     const res = await fetch(url.toString(), {
       headers: auth.headers,
@@ -42,7 +41,7 @@ export async function GET(req: NextRequest) {
     return applyAuthResponseCookies(response, auth.response);
   } catch (error) {
     return buildProxyExceptionResponse(error, {
-      publicMessage: "Failed to fetch ops users",
+      publicMessage: "Failed to fetch memberships overview",
     });
   }
 }
