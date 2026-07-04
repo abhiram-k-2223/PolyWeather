@@ -15,9 +15,6 @@ TEXT_REPLACEMENTS = {
     ROOT / "README.md": [
         (r"- Version: `v[\d.]+`", f"- Version: `{DISPLAY_VERSION}`"),
     ],
-    ROOT / "README_ZH.md": [
-        (r"- 版本：`v[\d.]+`", f"- 版本：`{DISPLAY_VERSION}`"),
-    ],
     ROOT / "docs" / "API_ZH.md": [
         (r"PolyWeather API 文档（v[\d.]+）", f"PolyWeather API 文档（{DISPLAY_VERSION}）"),
     ],

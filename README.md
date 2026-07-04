@@ -1,11 +1,8 @@
 # PolyWeather Pro
 
-Production weather-intelligence stack for temperature settlement markets.
+Production weather-intelligence stack for **temperature settlement markets** (prediction markets like Polymarket). Aggregates real-time observations from dozens of global weather sources, applies a proprietary DEB (Dynamic Error Balancing) ensemble model, and presents actionable analysis through a web dashboard, Telegram bot, and browser extension.
 
 Official dashboard: [polyweather.top](https://polyweather.top/)
-中文说明: [README_ZH.md](README_ZH.md)
-
-Public docs center: `/docs/intro` on the main site (bilingual product documentation for the current terminal, chart reading, realtime source cadence, settlement stations, and the browser extension).
 
 ## Product Screenshots
 
@@ -21,39 +18,22 @@ Public docs center: `/docs/intro` on the main site (bilingual product documentat
 
 [![Star History Chart](https://api.star-history.com/svg?repos=yangyuan-zhen/PolyWeather&type=Date)](https://star-history.com/#yangyuan-zhen/PolyWeather&Date)
 
-## Product Status (2026-06-07)
+## Product Status
 
-- Subscription live: `Pro Monthly 29.9 USDC / 30 days` and `Pro Quarterly 79.9 USDC / 90 days`.
-- Referral pricing live: invited users can get the first monthly Pro at `20 USDC`; inviters receive `3500` points after a valid first Pro payment, capped at 10 paid invites per month.
-- Points are redeemable for payment discounts (`500 pts = 1 USDC`, monthly max `3 USDC`, quarterly max `8 USDC`). Useful user feedback can also receive manual point rewards through ops.
-- Onchain checkout live: Polygon contract checkout (USDC / USDC.e) plus Ethereum mainnet USDC direct-transfer confirmation.
-- Auto-reconciliation live: event listener + periodic confirm loop.
-- Ops dashboard live: `/ops` for memberships, leaderboard, user feedback triage, manual point grants, and payment incident triage.
-- Lightweight observability live: `/healthz`, `/api/system/status`, `/metrics`.
-- Realtime terminal live: visible city charts subscribe through `/api/events?cities=...&since_revision=...`, receive `city_observation_patch.v1` SSE patches, and replay short gaps from Redis Stream in production or SQLite fallback in local/single-node mode.
-- Chart refresh is observation-driven: live patches merge into the current chart without a loading overlay; only visible charts run a 60s no-patch fallback, and returning from a background browser tab triggers a foreground catch-up refresh.
-- Temperature charts default to All Day, keep an optional Peak window derived from the DEB hourly path, and render all timestamps in the selected city's local time.
-- The chart core has been split into focused logic/canvas/state modules; Recharts now receives explicit measured dimensions to avoid 0x0 rendering and disappearing curves.
-- DEB hourly consensus (`deb_hourly_consensus.v1`) is now the preferred hourly forecast path for peak-window detection and chart overlays; DEB remains a forecast curve, never an observation source.
-- Legacy Gaussian probability stays out of the default temperature chart surface; hover tooltips show `Gaussian μ` plus the full bucket distribution by temperature range.
-- Settlement runway curves are visible by default for AMSC/AMOS cities; the configured settlement runway is highlighted and auxiliary runways are shown as secondary context.
-- Hong Kong uses CoWIN station `6087` (Po Leung Kuk Choi Kai Yau School) as the 1-minute reference-station curve, with HKO 10-minute observations kept as the official meteorological layer.
-- Telegram airport/runway pushes are bilingual by default and use settlement-endpoint runway temperatures for slope/current/summary copy.
-- Runtime state, cache, and core offline training/backfill flows now use SQLite as the primary path; legacy JSON/JSONL files remain only for migration, export, and explicit fallback input.
-- Intraday analysis is now positioned as a professional meteorology read: headline, confidence, base/upside/downside paths, next observation point, evidence chain, failure modes, and confirmation rules.
-- Intraday modal now blocks stale cached detail during refresh, so users do not briefly trade off old city/date data before full detail arrives.
-- Terminal chart/detail workflow now combines settlement observations, DEB hourly consensus, model context, probability distribution tooltips, and market-bucket mapping without blocking the chart on AI text generation.
-- Terminal data uses page memory cache, browser `localStorage`, backend short-TTL cache, SSE patch replay, and foreground refresh so returning from another tab restores the latest visible chart state quickly.
-- Market bucket matching now uses the full `all_buckets` surface and strict exact / range / or-higher / or-lower direction checks, reducing bad matches to unreasonable tail buckets.
-- The market-signal difference means `model probability - market-implied probability`; positive values indicate weather probability above market pricing, while negative values indicate the YES is already priced more fully.
-- Calibrated model probability is now the primary probability panel. It shows the active legacy Gaussian probability engine, while model consensus remains a secondary reference.
-- Non-Hong Kong airport cities now ingest `TAF` and parse `FM / TEMPO / BECMG / PROB30/40`.
-- Temperature chart now overlays `TAF Timing` markers near the expected peak window.
-- Trade cue now combines upper-air structure, `TAF`, market crowding, and `edge_percent`.
-- Browser extension now uses `DEB` for multi-day forecast and stays positioned as a lightweight lead-in to the main site.
-- Official nearby-network layer now covers `MGM` (Turkey), `CMA/NMC` (Mainland China), `JMA AMeDAS` (Japan), `AMOS` (Korea, runway-level, Seoul/Busan), `HKO` (Hong Kong), and `CWA` (Taiwan).
-- Tokyo now ingests Haneda `JMA AMeDAS` 10-minute temperature as the official enhancement layer.
-- Frontend design system overhauled: unified CSS token system, eliminated `!important` abuse (134→49 in light theme), consolidated breakpoints (18→10), migrated hardcoded colors to CSS variables, added ARIA attributes and focus-visible keyboard navigation. See `docs/frontend-ui-design-review.md` for the full audit trail.
+- **Onchain subscription** live: Pro Monthly (29.9 USDC) and Pro Quarterly (79.9 USDC) via Polygon smart contract checkout. Referral program active.
+- **Realtime terminal** with SSE-driven live charts: observations stream via `/api/events` as `city_observation_patch.v1` patches with Redis Stream replay. Chart refresh is observation-driven — no loading overlay.
+- **DEB hourly consensus** (`deb_hourly_consensus.v1`) is the preferred hourly forecast path for peak-window detection and chart overlays. DEB remains a forecast curve, never an observation source.
+- **Settlement runway curves** visible by default for AMSC/AMOS cities; configured settlement runway highlighted with auxiliary runways as secondary context.
+- **Calibrated probability** (legacy Gaussian) shown as the primary probability panel; model-market difference indicates `model probability - market-implied probability`.
+- **Market bucket matching** uses the full `all_buckets` surface with strict exact/range/or-higher/or-lower direction checks.
+- **Intraday analysis** provides professional meteorology read: headline, confidence, base/upside/downside paths, evidence chain, failure modes, confirmation rules.
+- **Telegram bot** with bilingual airport/runway pushes, settlement-endpoint runway temperatures.
+- **Ops dashboard** (`/ops`) for membership management, user feedback triage, point grants, payment incident triage.
+- **Onchain payment system**: Polygon contract checkout (USDC/USDC.e) + Ethereum mainnet USDC direct-transfer auto-reconciliation via event listener + periodic confirm loop.
+- **Browser extension** uses DEB for multi-day forecast as a lightweight lead-in to the main site.
+- **TAF parsing** for non-Hong Kong airport cities with timing overlays and disruption interpretation.
+- **Official nearby-network layers**: MGM (Turkey), CMA/NMC (Mainland China), JMA AMeDAS (Japan), AMOS (Korea runway-level), HKO (Hong Kong), CWA (Taiwan).
+- **51 monitored cities** across EMEA, APAC, Americas, and South Asia.
 
 ## License & Commercial Boundary
 
@@ -63,30 +43,31 @@ This repository is licensed under **GNU AGPL-3.0 only** from `2026-03-30` onward
 - Not included in this repository: private production data, internal operating thresholds, commercial risk rules, pricing strategy details, and growth tooling.
 - Trademark, brand, domain, production databases, and hosted-service operations are **not** granted by the code license.
 
-See: [AGPL-3.0 & Commercial Boundary](docs/OPEN_CORE_POLICY.md)
+See the AGPL-3.0 license text in the repository root for full terms.
 
 ## Core Capabilities
 
-- Aggregates observations and forecasts for 51 monitored cities.
-- Uses DEB (Dynamic Error Balancing) to blend multi-model highs.
-- Builds a DEB-weighted hourly consensus path for peak-window logic and chart display.
-- Generates settlement-oriented calibrated probability buckets (`mu` + bucket distribution) via the legacy Gaussian calibration path.
-- Adds terminal chart/detail workflows that combine live observations, DEB-centered high-temperature context, market-bucket mapping, and model-market difference.
-- Shows calibrated Gaussian context in chart tooltips as `mu` plus the full temperature-range probability distribution, without reintroducing probability bands into the main temperature view.
-- Reuses one analysis core across web dashboard and Telegram bot.
-- Adds payment audit trails, replay tooling, and incident visibility in ops.
-- Adds an in-app feedback loop with chart context, user-visible feedback status, ops triage, and manual point rewards for useful reports and suggestions.
-- Adds peak-window-oriented intraday analysis with meteorology headline, path buckets, evidence chain, invalidation rules, and confirmation rules.
-- Adds airport-side `TAF` timing overlays and airport suppression/disruption interpretation for non-Hong Kong airport cities.
-- Adds official nearby-network and runway-level enhancement layers for China, Japan, Korea (AMOS runway sensors for Seoul/Busan), Hong Kong, Taiwan, and Turkey without replacing airport settlement anchors.
+- Aggregates observations and forecasts for 51 monitored cities globally.
+- **DEB (Dynamic Error Balancing)** — proprietary algorithm that blends multi-model high-temperature forecasts with dynamically weighted error balancing.
+- **DEB Hourly Consensus** — preferred hourly forecast path for peak-window detection and chart overlays.
+- **Settlement-source oriented** — each city configured with a specific settlement weather station matching the prediction market's official source.
+- **Calibrated probability** (legacy Gaussian) with `mu` + full bucket distribution by temperature range.
+- **Real-time SSE patches** — observations streamed via Server-Sent Events with Redis Stream replay.
+- **Terminal chart/detail workflow** combining settlement observations, DEB hourly consensus, model context, probability distributions, and market-bucket mapping.
+- **Multi-layer data sources**: METAR, TAF, Open-Meteo, AMOS (Korea runway), AMSC AWOS (China runway), HKO, JMA AMeDAS, CWA, MGM, NOAA, MADIS, FMI, KNMI, CoWIN, IMS, NCM, AEROWEB, Singapore MSS, Wunderground.
+- **Onchain payment system** with Polygon smart contract checkout, Ethereum USDC direct-transfer, auto-reconciliation, and incident visibility in ops.
+- **Telegram bot** with bilingual push notifications for airport/runway temperature alerts.
+- **Polymarket trading engine** — automated signal ingestion, order management, position tracking, risk engine.
+- **In-app feedback loop** with chart context, status tracking, ops triage, and point rewards.
+- **Single analysis core** reused across web dashboard, Telegram bot, and browser extension.
 
 ## Reference Architecture
 
 ```mermaid
 flowchart LR
-    U["Users (Web / Telegram)"] --> FE["Next.js Frontend (Vercel)"]
+    U["Users (Web / Telegram)"] --> FE["Next.js Frontend (Vercel / Docker)"]
     U --> BOT["Telegram Bot (VPS)"]
-    FE --> API["FastAPI /web/app.py"]
+    FE --> API["FastAPI Backend"]
     BOT --> API
 
     API --> WX["Weather Collector"]
@@ -108,10 +89,10 @@ flowchart LR
 
 ## Monitored Cities (51)
 
-- Europe / Middle East / Africa: Ankara, Istanbul, Moscow, London, Paris, Munich, Milan, Warsaw, Madrid, Tel Aviv, Amsterdam, Helsinki, Lagos, Cape Town, Jeddah
-- APAC: Seoul, Busan, Hong Kong, Lau Fau Shan, Taipei, Shanghai, Beijing, Qingdao, Wuhan, Chengdu, Chongqing, Shenzhen, Guangzhou, Singapore, Tokyo, Kuala Lumpur, Jakarta, Manila, Wellington
-- Americas: Toronto, New York, Los Angeles, San Francisco, Aurora, Austin, Houston, Chicago, Dallas, Miami, Atlanta, Seattle, Mexico City, Buenos Aires, Sao Paulo, Panama City
-- South Asia: Lucknow, Karachi
+- **EMEA**: Ankara, Istanbul, Moscow, London, Paris, Munich, Milan, Warsaw, Madrid, Tel Aviv, Amsterdam, Helsinki, Lagos, Cape Town, Jeddah
+- **APAC**: Seoul, Busan, Hong Kong, Lau Fau Shan, Taipei, Shanghai, Beijing, Qingdao, Wuhan, Chengdu, Chongqing, Shenzhen, Guangzhou, Singapore, Tokyo, Kuala Lumpur, Jakarta, Manila, Wellington
+- **Americas**: Toronto, New York, Los Angeles, San Francisco, Aurora, Austin, Houston, Chicago, Dallas, Miami, Atlanta, Seattle, Mexico City, Buenos Aires, São Paulo, Panama City
+- **South Asia**: Lucknow, Karachi
 
 ## Quick Start
 
@@ -128,20 +109,6 @@ cd frontend
 npm ci
 npm run dev
 ```
-
-## Recent Highlights
-
-- Gaussian probability tooltip now lists the full temperature-range distribution instead of only the highest-probability bucket, while the main chart remains focused on observations and forecasts.
-- User feedback is now a product loop: terminal submissions attach chart context, users can track status in-app, and ops can reward useful feedback with points.
-- Airport-linked contracts use the METAR / airport primary observing site as the settlement anchor. Wunderground pages are reference/history pages, not stations.
-- Taipei and Shenzhen retain their explicitly configured station history pages for reconciliation, but the docs avoid describing Wunderground itself as a physical station.
-- Hong Kong keeps `HKO` official readings in dashboard and history, without falling back to airport METAR lines.
-- Intraday analysis now separates meteorology conclusion, evidence chain, invalidation rules, confirmation rules, calibrated probability, and market reference.
-- `TAF` is used as an airport-side confirmation layer, not as the main temperature model.
-- Calibrated probability uses the legacy Gaussian path; model vote counts remain an explanatory consensus line, not the final probability.
-- Browser extension remains a lightweight monitoring + basic-bias product, while the site holds the full analysis experience.
-- Realtime terminal charts use SSE patches plus replayable event storage; full HTTP detail remains the authoritative snapshot.
-- Chart observations are shown in the city's local time, not the browser timezone.
 
 ## Runtime Data (Recommended on VPS)
 
@@ -200,31 +167,12 @@ Production payment routes are configured by the backend. Polygon remains the def
 | `/diag` | Startup diagnostics |
 | `/help` | Help and usage |
 
-## Documentation Index
+## Documentation
 
-- Chinese overview: [README_ZH.md](README_ZH.md)
-- Chinese API guide: [docs/API_ZH.md](docs/API_ZH.md)
-- TAF signal guide (ZH): [docs/TAF_SIGNAL_ZH.md](docs/TAF_SIGNAL_ZH.md)
-- Model stack & DEB (ZH): [docs/MODEL_STACK_AND_DEB_ZH.md](docs/MODEL_STACK_AND_DEB_ZH.md)
-- Commercialization: [docs/COMMERCIALIZATION.md](docs/COMMERCIALIZATION.md)
-- AGPL-3.0 policy: [docs/OPEN_CORE_POLICY.md](docs/OPEN_CORE_POLICY.md)
-- Supabase setup (ZH): [docs/SUPABASE_SETUP_ZH.md](docs/SUPABASE_SETUP_ZH.md)
-- Configuration & secrets (ZH): [docs/CONFIGURATION_ZH.md](docs/CONFIGURATION_ZH.md)
-- Frontend deployment (ZH): [docs/FRONTEND_DEPLOYMENT_ZH.md](docs/FRONTEND_DEPLOYMENT_ZH.md)
-- Tech debt (ZH): [docs/TECH_DEBT_ZH.md](docs/TECH_DEBT_ZH.md)
-- Airport realtime sources: [docs/AIRPORT_REALTIME_SOURCES.md](docs/AIRPORT_REALTIME_SOURCES.md)
-- Airport market monitor (ZH): [docs/AIRPORT_MARKET_MONITOR_ZH.md](docs/AIRPORT_MARKET_MONITOR_ZH.md)
-- Services overview (ZH): [docs/SERVICES_ZH.md](docs/SERVICES_ZH.md)
-- Payment verification: [docs/payments/POLYGONSCAN_VERIFY.md](docs/payments/POLYGONSCAN_VERIFY.md)
-- Payment audit: [docs/payments/PAYMENT_AUDIT_ZH.md](docs/payments/PAYMENT_AUDIT_ZH.md)
-- Payment V2 upgrade: [docs/payments/PAYMENT_UPGRADE_V2_ZH.md](docs/payments/PAYMENT_UPGRADE_V2_ZH.md)
-- Ops admin guide: [docs/OPS_ADMIN_ZH.md](docs/OPS_ADMIN_ZH.md)
-- Monitoring guide (ZH): [docs/MONITORING_ZH.md](docs/MONITORING_ZH.md)
-- Deep research report: [docs/deep-research-report.md](docs/deep-research-report.md)
-- Release process: [RELEASE.md](RELEASE.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- [Release process](RELEASE.md)
+- [Changelog](CHANGELOG.md)
 
 ## Version
 
 - Version: `v1.8.1`
-- Last Updated: `2026-06-07`
+- Last Updated: `2026-07-04`
