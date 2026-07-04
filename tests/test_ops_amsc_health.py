@@ -1,6 +1,6 @@
 from web.services import ops_api
 from src.database.db_manager import DBManager
-from src.data_collection.amsc_awos_sources import AmscAwosSourceMixin
+from src.data_collection.sources.amsc_awos_sources import AmscAwosSourceMixin
 
 
 def test_runtime_secret_metadata_masks_value(tmp_path):

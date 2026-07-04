@@ -1,4 +1,4 @@
-from src.data_collection.nws_open_meteo_sources import (
+from src.data_collection.sources.nws_open_meteo_sources import (
     OPEN_METEO_MULTI_MODEL_ORDER,
     _parse_open_meteo_multi_model_daily,
 )
@@ -277,7 +277,7 @@ def test_persisted_open_meteo_cooldown_skips_outbound_request(monkeypatch, tmp_p
 
 
 def test_multi_model_hourly_parser():
-    from src.data_collection.nws_open_meteo_sources import _parse_open_meteo_multi_model_hourly
+    from src.data_collection.sources.nws_open_meteo_sources import _parse_open_meteo_multi_model_hourly
 
     hourly = {
         "time": ["2026-05-21T00:00", "2026-05-21T01:00"],
@@ -295,7 +295,7 @@ def test_multi_model_hourly_parser():
 
 
 def test_merge_multi_model_result_with_cache_hourly():
-    from src.data_collection.nws_open_meteo_sources import _merge_multi_model_result_with_cache
+    from src.data_collection.sources.nws_open_meteo_sources import _merge_multi_model_result_with_cache
 
     cached = {
         "forecasts": {"ECMWF": 20.0, "GFS": 19.5, "ICON-EU": 19.8},

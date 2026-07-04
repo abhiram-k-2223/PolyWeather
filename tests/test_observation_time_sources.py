@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 
-from src.data_collection.aeroweb_sources import _aeroweb_obs_time_from_parts
-from src.data_collection.cowin_sources import _cowin_obs_time_to_iso
-from src.data_collection.hko_obs_sources import _hko_obs_time_to_iso
-from src.data_collection.ims_sources import _ims_obs_time_to_iso
-from src.data_collection.jma_amedas_sources import _jma_obs_time_from_key
-from src.data_collection.knmi_sources import _knmi_obs_time_from_filename
-from src.data_collection.mgm_sources import _mgm_obs_time_to_iso
+from src.data_collection.sources.aeroweb_sources import _aeroweb_obs_time_from_parts
+from src.data_collection.sources.cowin_sources import _cowin_obs_time_to_iso
+from src.data_collection.sources.hko_obs_sources import _hko_obs_time_to_iso
+from src.data_collection.sources.ims_sources import _ims_obs_time_to_iso
+from src.data_collection.sources.jma_amedas_sources import _jma_obs_time_from_key
+from src.data_collection.sources.knmi_sources import _knmi_obs_time_from_filename
+from src.data_collection.sources.mgm_sources import _mgm_obs_time_to_iso
 
 
 def test_aeroweb_obs_time_is_utc_aware():

@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 import httpx
 
-from src.data_collection import cowin_sources
-from src.data_collection.cowin_sources import CowinSourceMixin
+from src.data_collection.sources import cowin_sources
+from src.data_collection.sources.cowin_sources import CowinSourceMixin
 from src.data_collection.observation_source_gate import reset_observation_source_gate_for_tests
 
 

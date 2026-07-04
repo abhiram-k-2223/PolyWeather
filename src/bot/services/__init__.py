@@ -1,2 +1,0 @@
-"""Bot service layer."""
-

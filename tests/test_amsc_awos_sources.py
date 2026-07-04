@@ -1,4 +1,4 @@
-from src.data_collection.amsc_awos_sources import (
+from src.data_collection.sources.amsc_awos_sources import (
     AmscAwosSourceMixin,
     _amsc_parse_wind_plate_payload,
     _amsc_supported_city_codes,
@@ -145,7 +145,7 @@ def test_parse_wind_plate_payload_rejects_unauthorized_or_empty_payloads():
 
 
 def test_fetch_amsc_official_current_uses_domestic_city_whitelist(monkeypatch):
-    import src.data_collection.amsc_awos_sources as _amsc
+    import src.data_collection.sources.amsc_awos_sources as _amsc
     from src.data_collection.observation_source_gate import reset_observation_source_gate_for_tests
 
     monkeypatch.setenv("POLYWEATHER_OBSERVATION_SOURCE_DB_LOCK_ENABLED", "false")

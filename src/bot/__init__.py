@@ -1,2 +1,1 @@
-"""Telegram bot composition layers."""
-
+"""Personal-signal-only Telegram bot."""

@@ -11,10 +11,10 @@ from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple
 
 from loguru import logger
 
-from src.data_collection.amos_station_sources import AMOS_AIRPORT_CODES
-from src.data_collection.amsc_awos_sources import AMSC_AWOS_AIRPORTS
+from src.data_collection.sources.amos_station_sources import AMOS_AIRPORT_CODES
+from src.data_collection.sources.amsc_awos_sources import AMSC_AWOS_AIRPORTS
 from src.data_collection.city_registry import CITY_REGISTRY
-from src.data_collection.hko_obs_sources import HKO_STATIONS
+from src.data_collection.sources.hko_obs_sources import HKO_STATIONS
 from src.database.runtime_state import ObservationCollectorStatusRepository
 
 

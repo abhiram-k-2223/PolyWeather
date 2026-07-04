@@ -1411,7 +1411,7 @@ def _build_amsc_awos_headers() -> dict[str, str]:
 def _check_amsc_awos_health(timeout: int = 8) -> dict[str, Any]:
     import time as _time
 
-    from src.data_collection.amsc_awos_sources import _amsc_parse_wind_plate_payload
+    from src.data_collection.sources.amsc_awos_sources import _amsc_parse_wind_plate_payload
 
     amsc_base = str(os.getenv("AMSC_AWOS_BASE_URL") or "").strip()
     if not amsc_base:

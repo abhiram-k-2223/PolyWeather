@@ -1,4 +1,4 @@
-from src.data_collection.amos_station_sources import (
+from src.data_collection.sources.amos_station_sources import (
     AmosStationSourceMixin,
     _amos_extract_observation_time,
     _amos_parse_runway_table,

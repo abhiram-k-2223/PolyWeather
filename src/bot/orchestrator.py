@@ -1,76 +1,47 @@
+"""Orchestrator — minimal Telegram bot for personal trade signals only.
+
+Starts a polling bot that can push TradeSignals from the trading engine
+to a configured personal chat. No community commands, no group
+management, no points or rewards.
+"""
+
 from __future__ import annotations
 
 import os
 from typing import Any
 
-from loguru import logger  # type: ignore
+from loguru import logger
 
-from src.bot.handlers.activity import ActivityHandler
-from src.bot.handlers.basic import BasicCommandHandler
-from src.bot.io_layer import BotIOLayer
-from src.bot.runtime_coordinator import StartupCoordinator
 from src.utils.config_validation import validate_or_raise
-from src.utils.telegram_chat_ids import get_telegram_chat_ids_from_env
+from src.utils.config_loader import load_config
+
+# Module-level bot reference for the signal dispatcher
+_bot: Any = None
 
 
-def _register_handlers(
-    bot: Any,
-    config: dict[str, Any],
-    io_layer: BotIOLayer,
-    guard: Any | None,
-    city_service: Any | None,
-    deb_service: Any | None,
-    startup_coordinator: StartupCoordinator,
-) -> None:
-    BasicCommandHandler(
-        bot=bot,
-        io_layer=io_layer,
-        runtime_status_provider=startup_coordinator.get_runtime_status,
-        config=config,
-    ).register()
-    ActivityHandler(bot=bot, io_layer=io_layer).register()
+def get_bot() -> Any:
+    """Return the running bot instance, or None if not started."""
+    global _bot
+    return _bot
 
 
 def start_bot() -> None:
-    import telebot  # type: ignore
+    global _bot
+
+    import telebot
 
     from src.database.db_manager import DBManager
-    from src.utils.config_loader import load_config
 
     validate_or_raise("bot")
-    config = load_config()
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    load_config()
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     if not token:
-        logger.error("未找到 TELEGRAM_BOT_TOKEN 环境变量")
+        logger.error("TELEGRAM_BOT_TOKEN not set — cannot start bot")
         return
 
-    bot = telebot.TeleBot(token)
-    db = DBManager()
+    _bot = telebot.TeleBot(token)
+    DBManager()
 
-    io_layer = BotIOLayer(bot=bot, db=db)
-    startup_coordinator = StartupCoordinator(
-        bot=bot,
-        config=config,
-        command_access_mode="public",
-        protected_commands=[],
-        required_group_chat_id=",".join(get_telegram_chat_ids_from_env()),
-    )
-
-    _register_handlers(
-        bot=bot,
-        config=config,
-        io_layer=io_layer,
-        guard=None,
-        city_service=None,
-        deb_service=None,
-        startup_coordinator=startup_coordinator,
-    )
-    runtime_status = startup_coordinator.start_all()
-    started_count = sum(1 for loop in runtime_status.loops if loop.started)
-
-    logger.info(
-        "🤖 Bot 启动中... access=public protected_commands=none loops_started={}/{}",
-        started_count,
-        len(runtime_status.loops),
-    )
-    bot.infinity_polling(allowed_updates=["message", "callback_query", "chat_join_request"])
+    logger.info("Bot started in signal-only mode")
+    _bot.infinity_polling(allowed_updates=["message"])

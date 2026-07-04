@@ -14,22 +14,22 @@ from src.utils.refresh_policy import (
     OBSERVATION_REFRESH_SEC,
 )
 from src.data_collection.settlement_sources import SettlementSourceMixin
-from src.data_collection.metar_sources import MetarSourceMixin
-from src.data_collection.mgm_sources import MgmSourceMixin
-from src.data_collection.jma_amedas_sources import JmaAmedasSourceMixin
-from src.data_collection.nws_open_meteo_sources import NwsOpenMeteoSourceMixin
-from src.data_collection.amos_station_sources import AmosStationSourceMixin
-from src.data_collection.amsc_awos_sources import AmscAwosSourceMixin
-from src.data_collection.fmi_sources import FmiSourceMixin
-from src.data_collection.knmi_sources import KnmiSourceMixin
-from src.data_collection.hko_obs_sources import HkoObsSourceMixin
-from src.data_collection.cowin_sources import CowinSourceMixin
-from src.data_collection.madis_sources import MadisSourceMixin
-from src.data_collection.singapore_mss_sources import SingaporeMssSourceMixin
-from src.data_collection.ims_sources import ImsSourceMixin
-from src.data_collection.ncm_sources import NcmSourceMixin
-from src.data_collection.aeroweb_sources import AerowebSourceMixin
-from src.data_collection.wunderground_sources import WundergroundHistoricalMixin
+from src.data_collection.sources.metar_sources import MetarSourceMixin
+from src.data_collection.sources.mgm_sources import MgmSourceMixin
+from src.data_collection.sources.jma_amedas_sources import JmaAmedasSourceMixin
+from src.data_collection.sources.nws_open_meteo_sources import NwsOpenMeteoSourceMixin
+from src.data_collection.sources.amos_station_sources import AmosStationSourceMixin
+from src.data_collection.sources.amsc_awos_sources import AmscAwosSourceMixin
+from src.data_collection.sources.fmi_sources import FmiSourceMixin
+from src.data_collection.sources.knmi_sources import KnmiSourceMixin
+from src.data_collection.sources.hko_obs_sources import HkoObsSourceMixin
+from src.data_collection.sources.cowin_sources import CowinSourceMixin
+from src.data_collection.sources.madis_sources import MadisSourceMixin
+from src.data_collection.sources.singapore_mss_sources import SingaporeMssSourceMixin
+from src.data_collection.sources.ims_sources import ImsSourceMixin
+from src.data_collection.sources.ncm_sources import NcmSourceMixin
+from src.data_collection.sources.aeroweb_sources import AerowebSourceMixin
+from src.data_collection.sources.wunderground_sources import WundergroundHistoricalMixin
 from src.data_collection.city_time import get_city_utc_offset_seconds
 from src.database.db_manager import DBManager
 

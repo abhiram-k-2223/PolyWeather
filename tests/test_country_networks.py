@@ -9,8 +9,8 @@ import yaml
 from src.data_collection.country_networks import build_country_network_snapshot
 from src.data_collection.city_registry import ALIASES, CITY_REGISTRY
 from src.data_collection.city_time import CITY_TIME_ZONES, get_city_utc_offset_seconds
-from src.data_collection import metar_sources
-from src.data_collection.metar_sources import MetarSourceMixin
+from src.data_collection.sources import metar_sources
+from src.data_collection.sources.metar_sources import MetarSourceMixin
 from web.analysis_service import (
     _build_city_detail_payload,
     _build_intraday_meteorology,
