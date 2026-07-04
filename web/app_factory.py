@@ -5,6 +5,7 @@ This module centralizes router registration while preserving the existing
 more modular backend structure.
 """
 
+import logging
 import os
 
 from fastapi import FastAPI
@@ -21,7 +22,10 @@ from web.routers.scan import router as scan_router
 from web.routers.sse_router import router as sse_router
 from web.routers.system import router as system_router
 from web.routes import router as legacy_router
+from web.routers.trading import router as trading_router
 from web.scan_terminal_service import start_scan_terminal_prewarm
+
+logger = logging.getLogger(__name__)
 
 _ROUTES_REGISTERED_FLAG = "_polyweather_routes_registered"
 _OBSERVATION_COLLECTOR_STARTED_FLAG = "_polyweather_observation_collector_started"
@@ -45,6 +49,26 @@ def _observation_collector_enabled() -> bool:
     return enabled and _service_role() in {"collector"}
 
 
+def _register_trading_lifecycle(app: FastAPI) -> None:
+    """Register startup/shutdown handlers for the trading engine on *app*.
+
+    Each handler guards on ``POLYWEATHER_TRADING_ENABLED`` internally so
+    the module can be imported unconditionally without side effects.
+    """
+    try:
+        from web.services.trading_api import start_trading_engine, stop_trading_engine
+        # Use add_event_handler for startup; shutdown registered separately.
+        @app.on_event("startup")
+        async def _start_trading() -> None:
+            start_trading_engine()
+
+        @app.on_event("shutdown")
+        async def _stop_trading() -> None:
+            stop_trading_engine()
+    except ImportError as exc:
+        logger.warning("Trading engine not available: %s", exc)
+
+
 def create_app() -> FastAPI:
     """Return the configured FastAPI app with routers registered once."""
     if not bool(getattr(core_app.state, _ROUTES_REGISTERED_FLAG, False)):
@@ -58,10 +82,15 @@ def create_app() -> FastAPI:
         core_app.include_router(sse_router)
         core_app.include_router(payments_router)
         core_app.include_router(ops_router)
+        core_app.include_router(trading_router)
         core_app.include_router(legacy_router)
         setattr(core_app.state, _ROUTES_REGISTERED_FLAG, True)
         if _scan_terminal_prewarm_enabled():
             start_scan_terminal_prewarm()
+
+        # Initialize the trading engine on startup if configured
+        _register_trading_lifecycle(core_app)
+
     if (
         _observation_collector_enabled()
         and not bool(getattr(core_app.state, _OBSERVATION_COLLECTOR_STARTED_FLAG, False))
