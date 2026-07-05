@@ -1,108 +1,102 @@
-# PolyWeather Pro
+# PolyWeather
 
-Production weather-intelligence stack for **temperature settlement markets** (prediction markets like Polymarket). Aggregates real-time observations from dozens of global weather sources, applies a proprietary DEB (Dynamic Error Balancing) ensemble model, and presents actionable analysis through a web dashboard, Telegram bot, and browser extension.
+Automated **weather-driven trading engine** for Polymarket temperature prediction markets. Collects real-time observations from 40+ global weather sources, runs a DEB (Dynamic Ensemble Blending) model to forecast daily high temperatures, generates trade signals, and executes orders on the Polymarket CLOB — all via a single integrated pipeline.
 
-Official dashboard: [polyweather.top](https://polyweather.top/)
+Web dashboard: [polyweather.top](https://polyweather.top/) | API: `https://api.polyweather.top`
 
-## Product Screenshots
+---
 
-### Realtime Terminal
+## What It Does
 
-![PolyWeather realtime terminal](frontend/public/static/web.webp)
+PolyWeather transforms raw weather data into automated trades on Polymarket temperature outcome markets:
 
-### Telegram Runway Alerts
+1. **Collect** — Pulls observations from 40+ sources (METAR, AMOS, AMSC AWOS, HKO, JMA, Open-Meteo, NOAA, and more) at source-native frequencies.
+2. **Analyze** — Runs DEB (Dynamic Ensemble Blending) to produce a weighted multi-model high-temperature forecast per city, with bias correction, intraday adjustment, and calibrated probability distributions.
+3. **Signal** — Converts analysis into trade signals based on temperature anomaly thresholds, confidence levels, and probability-implied edges.
+4. **Trade** — Executes on Polymarket via CLOB client (EIP-712 auth, order management, neg-risk adapter) with a configurable risk engine (max position, drawdown, cooldown, slippage).
+5. **Notify** — Pushes trade signals and P&L to a personal Telegram chat.
 
-![PolyWeather Telegram runway alerts](frontend/public/static/tel.png)
+---
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yangyuan-zhen/PolyWeather&type=Date)](https://star-history.com/#yangyuan-zhen/PolyWeather&Date)
-
-## Product Status
-
-- **Onchain subscription** live: Pro Monthly (29.9 USDC) and Pro Quarterly (79.9 USDC) via Polygon smart contract checkout. Referral program active.
-- **Realtime terminal** with SSE-driven live charts: observations stream via `/api/events` as `city_observation_patch.v1` patches with Redis Stream replay. Chart refresh is observation-driven — no loading overlay.
-- **DEB hourly consensus** (`deb_hourly_consensus.v1`) is the preferred hourly forecast path for peak-window detection and chart overlays. DEB remains a forecast curve, never an observation source.
-- **Settlement runway curves** visible by default for AMSC/AMOS cities; configured settlement runway highlighted with auxiliary runways as secondary context.
-- **Calibrated probability** (legacy Gaussian) shown as the primary probability panel; model-market difference indicates `model probability - market-implied probability`.
-- **Market bucket matching** uses the full `all_buckets` surface with strict exact/range/or-higher/or-lower direction checks.
-- **Intraday analysis** provides professional meteorology read: headline, confidence, base/upside/downside paths, evidence chain, failure modes, confirmation rules.
-- **Telegram bot** with bilingual airport/runway pushes, settlement-endpoint runway temperatures.
-- **Ops dashboard** (`/ops`) for membership management, user feedback triage, point grants, payment incident triage.
-- **Onchain payment system**: Polygon contract checkout (USDC/USDC.e) + Ethereum mainnet USDC direct-transfer auto-reconciliation via event listener + periodic confirm loop.
-- **Browser extension** uses DEB for multi-day forecast as a lightweight lead-in to the main site.
-- **TAF parsing** for non-Hong Kong airport cities with timing overlays and disruption interpretation.
-- **Official nearby-network layers**: MGM (Turkey), CMA/NMC (Mainland China), JMA AMeDAS (Japan), AMOS (Korea runway-level), HKO (Hong Kong), CWA (Taiwan).
-- **51 monitored cities** across EMEA, APAC, Americas, and South Asia.
-
-## License & Commercial Boundary
-
-This repository is licensed under **GNU AGPL-3.0 only** from `2026-03-30` onward.
-
-- Public in repo: weather aggregation, core analysis, dashboard, bot baseline, and standard payment flow.
-- Not included in this repository: private production data, internal operating thresholds, commercial risk rules, pricing strategy details, and growth tooling.
-- Trademark, brand, domain, production databases, and hosted-service operations are **not** granted by the code license.
-
-See the AGPL-3.0 license text in the repository root for full terms.
-
-## Core Capabilities
-
-- Aggregates observations and forecasts for 51 monitored cities globally.
-- **DEB (Dynamic Error Balancing)** — proprietary algorithm that blends multi-model high-temperature forecasts with dynamically weighted error balancing.
-- **DEB Hourly Consensus** — preferred hourly forecast path for peak-window detection and chart overlays.
-- **Settlement-source oriented** — each city configured with a specific settlement weather station matching the prediction market's official source.
-- **Calibrated probability** (legacy Gaussian) with `mu` + full bucket distribution by temperature range.
-- **Real-time SSE patches** — observations streamed via Server-Sent Events with Redis Stream replay.
-- **Terminal chart/detail workflow** combining settlement observations, DEB hourly consensus, model context, probability distributions, and market-bucket mapping.
-- **Multi-layer data sources**: METAR, TAF, Open-Meteo, AMOS (Korea runway), AMSC AWOS (China runway), HKO, JMA AMeDAS, CWA, MGM, NOAA, MADIS, FMI, KNMI, CoWIN, IMS, NCM, AEROWEB, Singapore MSS, Wunderground.
-- **Onchain payment system** with Polygon smart contract checkout, Ethereum USDC direct-transfer, auto-reconciliation, and incident visibility in ops.
-- **Telegram bot** with bilingual push notifications for airport/runway temperature alerts.
-- **Polymarket trading engine** — automated signal ingestion, order management, position tracking, risk engine.
-- **In-app feedback loop** with chart context, status tracking, ops triage, and point rewards.
-- **Single analysis core** reused across web dashboard, Telegram bot, and browser extension.
-
-## Reference Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
-    U["Users (Web / Telegram)"] --> FE["Next.js Frontend (Vercel / Docker)"]
-    U --> BOT["Telegram Bot (VPS)"]
-    FE --> API["FastAPI Backend"]
-    BOT --> API
+    O["40+ Weather Sources"] --> DC["Data Collection Worker"]
+    DC --> DB["SQLite Runtime State"]
+    DC --> SSE["SSE /api/events"]
 
-    API --> WX["Weather Collector"]
-    WX --> METAR["Aviation Weather (METAR)"]
-    WX --> TAF["Aviation Weather (TAF)"]
-    WX --> MGM["MGM (Turkey station network)"]
-    WX --> OM["Open-Meteo"]
-    WX --> JMA["JMA AMeDAS (Japan)"]
-    WX --> AMOS["AMOS runway sensors (Korea)"]
-    WX --> HKO["HKO / CWA / NOAA / Official settlement sources"]
+    DB --> ANA["DEB Analysis + Probability"]
+    ANA --> SIG["Signal Ingestion"]
 
-    API --> ANA["DEB + Hourly Consensus + Probability + Market Scan"]
-    API --> SSE["SSE /api/events"]
-    WX --> SSE
-    SSE --> EVENT["Redis Stream / SQLite Event Log"]
-    ANA --> PAY["Payment State (Multi-chain Intent + Event + Confirm Loop)"]
-    ANA --> STATE["SQLite runtime state"]
+    SIG --> RISK["Risk Engine"]
+    RISK --> OM["Order Manager"]
+    OM --> CLOB["Polymarket CLOB API"]
+
+    OM --> PT["Position Tracker"]
+    PT --> BOT["Personal Telegram Bot"]
+
+    WEB["Web Dashboard"] --> DB
+    WEB --> SSE
+
+    OPS["Ops Dashboard"] --> DB
 ```
 
-## Monitored Cities (51)
+### Components
 
-- **EMEA**: Ankara, Istanbul, Moscow, London, Paris, Munich, Milan, Warsaw, Madrid, Tel Aviv, Amsterdam, Helsinki, Lagos, Cape Town, Jeddah
-- **APAC**: Seoul, Busan, Hong Kong, Lau Fau Shan, Taipei, Shanghai, Beijing, Qingdao, Wuhan, Chengdu, Chongqing, Shenzhen, Guangzhou, Singapore, Tokyo, Kuala Lumpur, Jakarta, Manila, Wellington
-- **Americas**: Toronto, New York, Los Angeles, San Francisco, Aurora, Austin, Houston, Chicago, Dallas, Miami, Atlanta, Seattle, Mexico City, Buenos Aires, São Paulo, Panama City
-- **South Asia**: Lucknow, Karachi
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| **Data Collection** | `src/data_collection/` | 40+ source adapters with rate limiting, singleflight, and freshness tracking |
+| **Trading Engine** | `src/trading/` | Signal ingestion, Polymarket CLOB client, order management, risk engine, position tracking, trade storage |
+| **DEB Analysis** | `src/analysis/` | Multi-model ensemble blending, bias correction, hourly path correction, probability distribution |
+| **Web Service** | `web/` | FastAPI backend: city data, SSE streams, trading API, ops dashboards, system health |
+| **Frontend** | `frontend/` | Next.js 15 dashboard: live terminal, accuracy tracking, ops panel |
+| **Bot** | `src/bot/` | Minimal personal Telegram bot for trade signal push (no community features) |
+| **Infrastructure** | `src/async_infra/` | Event loop manager, async HTTP client, rate limiter, retry logic, Redis client |
+
+---
+
+## Data Sources (40+)
+
+PolyWeather aggregates observations from a diverse global network of station-level temperature sources, prioritized by market settlement relevance:
+
+| Source | Coverage | Type |
+|--------|----------|------|
+| **METAR** | Global (aviationweather.gov) | Airport observations |
+| **AMOS** | South Korea | Runway-level sensors |
+| **AMSC AWOS** | Mainland China | Runway-level sensors |
+| **Open-Meteo** | Global | Multi-model forecasts |
+| **NOAA WRH** | United States | Timeseries observations |
+| **HKO** | Hong Kong | Official station |
+| **JMA AMeDAS** | Japan | Automated meteorological data |
+| **CWA** | Taiwan | Open data observations |
+| **MGM** | Turkey | Station network |
+| **KMA** | South Korea | Station network |
+| **FMI** | Finland | WFS observations |
+| **KNMI** | Netherlands | Open data observations |
+| **IMS** | Israel | Meteorological service |
+| **NCM** | Saudi Arabia | Station network |
+| **MADIS** | United States | High-frequency observations |
+| **Singapore MSS** | Singapore | Meteorological service |
+| **MSS (multi-model)** | Global | ECMWF, GFS, ICON, GEM, HRDPS |
+
+---
 
 ## Quick Start
 
-### Backend + Bot (Docker)
+### Full stack (Docker)
 
 ```bash
 docker compose up -d --build
 ```
 
-### Frontend (local)
+This starts four containers:
+- `polyweather_web` — FastAPI backend (port 8000)
+- `polyweather_frontend` — Next.js dashboard (port 3001)
+- `polyweather_collector` — Background observation collection worker
+- `polyweather_redis` — Redis for SSE event streaming
+
+### Frontend development
 
 ```bash
 cd frontend
@@ -110,69 +104,145 @@ npm ci
 npm run dev
 ```
 
-## Runtime Data (Recommended on VPS)
+### Environment
 
-Use external runtime storage to avoid SQLite/git conflicts:
+Copy `.env.example` to `.env` and configure at minimum:
 
 ```env
-POLYWEATHER_RUNTIME_DATA_DIR=/var/lib/polyweather
-POLYWEATHER_DB_PATH=/var/lib/polyweather/polyweather.db
-POLYWEATHER_STATE_STORAGE_MODE=sqlite
-POLYWEATHER_EVENT_STORE=redis
-POLYWEATHER_REDIS_URL=redis://polyweather_redis:6379/0
-POLYWEATHER_REDIS_STREAM_MAXLEN=50000
-POLYWEATHER_REDIS_REQUIRED=true
+# Weather data collection
+POLYWEATHER_OBSERVATION_COLLECTOR_ENABLED=true
+
+# Trading engine (disabled by default)
+POLYWEATHER_TRADING_ENABLED=false
+POLY_MARKET_MAP={}
+
+# Telegram bot (personal signal push)
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_BOT_CHAT_ID=your_chat_id
+
+# Polymarket wallet
+POLY_TRADING_PRIVATE_KEY=...
 ```
 
-For local development or a strict single-process fallback, keep `POLYWEATHER_EVENT_STORE=sqlite`.
+See [Full configuration](#configuration) below for all options.
 
-## Ops Verification
+---
 
-### Health / system status / metrics
+## Configuration
+
+### Trading Engine
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYWEATHER_TRADING_ENABLED` | `false` | Master switch for the trading engine |
+| `POLY_MARKET_MAP` | `{}` | ICAO → (condition_id, token_id) JSON mapping |
+| `POLY_TRADING_PRIVATE_KEY` | — | Trading wallet private key (Polygon) |
+| `POLY_MAX_POSITION_SIZE_USDC` | `500` | Per-market position cap |
+| `POLY_MAX_TOTAL_EXPOSURE_USDC` | `5000` | Total portfolio exposure cap |
+| `POLY_MIN_CONFIDENCE` | `0.6` | Minimum signal confidence threshold |
+| `POLY_TRADING_POLL_SECONDS` | `60` | Signal polling interval |
+| `POLY_TRADING_RECONCILE_SECONDS` | `300` | CLOB reconciliation interval |
+
+### Observation Collection
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYWEATHER_OBSERVATION_COLLECTOR_TICK_SEC` | `30` | Main collector tick rate (s) |
+| `POLYWEATHER_OBSERVATION_COLLECTOR_INITIAL_DELAY_SEC` | `5` | Startup delay (s) |
+| `POLYWEATHER_OBSERVATION_COLLECTOR_AMOS_SEC` | `60` | AMOS poll interval (s) |
+| `POLYWEATHER_OBSERVATION_COLLECTOR_HKO_SEC` | `600` | HKO poll interval (s) |
+| `POLYWEATHER_OBSERVATION_COLLECTOR_MADIS_SEC` | `300` | MADIS poll interval (s) |
+
+### Backend
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYWEATHER_REDIS_URL` | `redis://localhost:6379/0` | Redis connection string |
+| `POLYWEATHER_EVENT_STORE` | `sqlite` | Event store backend (`sqlite` or `redis`) |
+| `POLYWEATHER_REDIS_STREAM_MAXLEN` | `50000` | Redis stream max length |
+| `POLYWEATHER_REDIS_REQUIRED` | `true` | Fail if Redis unavailable |
+| `POLYWEATHER_STATE_STORAGE_MODE` | `sqlite` | Runtime state backend |
+| `POLYWEATHER_DB_PATH` | `data/polyweather.db` | SQLite database path |
+
+---
+
+## API Endpoints
+
+### System
 
 ```bash
-curl http://127.0.0.1:8000/healthz
-curl http://127.0.0.1:8000/api/system/status
-curl http://127.0.0.1:8000/metrics
+curl https://api.polyweather.top/healthz          # Health check
+curl https://api.polyweather.top/api/system/status # System status
+curl https://api.polyweather.top/metrics           # Prometheus metrics
 ```
 
-### Frontend cache headers
+### Trading
 
 ```bash
-./scripts/validate_frontend_cache.sh "https://polyweather.top"
+curl https://api.polyweather.top/api/trading/status   # Engine health, P&L, risk
+curl https://api.polyweather.top/api/trading/orders   # Order history
+curl https://api.polyweather.top/api/trading/signals  # Signal history
+curl https://api.polyweather.top/api/trading/fills    # Fill records
 ```
 
-### Payment auto-reconciliation logs
+### Weather Data
 
 ```bash
-docker compose logs -f polyweather | egrep "payment event loop started|payment confirm loop started|payment auto-confirmed"
+curl https://api.polyweather.top/api/city/RKSS       # City detail + analysis
+curl https://api.polyweather.top/api/scan?region=east_asia  # Terminal scan
 ```
 
-### Payment runtime
+---
+
+## Project Structure
+
+```
+PolyWeather/
+├── src/                    # Python backend
+│   ├── analysis/           # DEB ensemble, probability, evaluation
+│   ├── async_infra/        # Event loop, HTTP client, rate limiter, Redis
+│   ├── bot/                # Personal Telegram push bot
+│   ├── data_collection/    # Weather source adapters (40+)
+│   │   └── sources/        # Individual source implementations
+│   ├── database/           # SQLite runtime state persistence
+│   ├── models/             # Pydantic model definitions
+│   ├── trading/            # Trading engine
+│   │   ├── engine/         # Signal ingestion, risk, order mgmt, positions
+│   │   ├── polymarket/     # CLOB client, Data API, wallet, neg-risk
+│   │   └── storage/        # Trade history persistence
+│   └── utils/              # Config, logging, metrics, secrets
+├── web/                    # FastAPI web service
+│   ├── routers/            # API route modules
+│   └── services/           # Business logic
+├── frontend/               # Next.js 15 dashboard
+├── tests/                  # Pytest test suite
+├── contracts/              # Solidity smart contracts (legacy)
+├── deploy/                 # Nginx, Docker, CI configuration
+└── scripts/                # Backfill, backtest, migration utilities
+```
+
+---
+
+## Development
 
 ```bash
-curl http://127.0.0.1:8000/api/payments/runtime
+# Python
+python -m ruff check .          # Lint
+python -m pytest                # Run tests
+uvicorn web.app:app --reload --host 0.0.0.0 --port 8000  # Dev server
+
+# Frontend
+cd frontend && npm run dev      # Dev server :3000
+cd frontend && npm run typecheck  # TypeScript checks
+cd frontend && npm run test:business  # Business state tests
 ```
 
-### Payment chains
-
-Production payment routes are configured by the backend. Polygon remains the default checkout-contract chain, while Ethereum mainnet USDC can be enabled as a direct-transfer route so users who pay on their wallet default network are still confirmed by `intent.chain_id`.
-
-## Telegram Commands
-
-| Command | Purpose |
-| :-- | :-- |
-| `/top` | User leaderboard |
-| `/id` | Show current chat ID |
-| `/diag` | Startup diagnostics |
-| `/help` | Help and usage |
-
-## Documentation
-
-- [Release process](RELEASE.md)
-- [Changelog](CHANGELOG.md)
+---
 
 ## Version
 
-- Version: `v1.8.1`
-- Last Updated: `2026-07-04`
+- **Version:** `v1.8.1`
+- **License:** GNU AGPL-3.0 (from 2026-03-30 onward)
+- **Last Updated:** `2026-07-04`
+
+See [RELEASE.md](RELEASE.md) for the release process and [CHANGELOG.md](CHANGELOG.md) for history.
