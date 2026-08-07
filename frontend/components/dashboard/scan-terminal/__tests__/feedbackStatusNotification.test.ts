@@ -30,11 +30,11 @@ export function runTests() {
       statusButtonSource.includes("FEEDBACK_STATUS_CACHE_TTL_MS"),
     "feedback status button must use a local cache and avoid refetching on every visibility resume",
   );
-  assert(feedbackStatusLabel("open", false) === "已收到", "open feedback should read as received to users");
-  assert(feedbackStatusLabel("triaged", false) === "已确认", "triaged feedback should read as confirmed to users");
-  assert(feedbackStatusLabel("investigating", false) === "处理中", "investigating feedback should read as in progress");
-  assert(feedbackStatusLabel("resolved", false) === "已解决", "resolved feedback should read as handled");
-  assert(feedbackStatusLabel("closed", true) === "Closed", "closed feedback should have English copy");
+  assert(feedbackStatusLabel("open") === "Received", "open feedback should read as received to users");
+  assert(feedbackStatusLabel("triaged") === "Confirmed", "triaged feedback should read as confirmed to users");
+  assert(feedbackStatusLabel("investigating") === "In progress", "investigating feedback should read as in progress");
+  assert(feedbackStatusLabel("resolved") === "Resolved", "resolved feedback should read as handled");
+  assert(feedbackStatusLabel("closed") === "Closed", "closed feedback should have English copy");
 
   const firstVersion = {
     id: 7,

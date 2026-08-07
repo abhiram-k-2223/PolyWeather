@@ -245,4 +245,4 @@ cd frontend && npm run test:business  # Business state tests
 - **License:** GNU AGPL-3.0 (from 2026-03-30 onward)
 - **Last Updated:** `2026-07-04`
 
-See [RELEASE.md](RELEASE.md) for the release process and [CHANGELOG.md](CHANGELOG.md) for history.
+See `VERSION` and `git log` for the version and release history.

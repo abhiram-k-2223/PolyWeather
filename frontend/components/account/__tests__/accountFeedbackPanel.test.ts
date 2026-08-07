@@ -37,7 +37,7 @@ export function runTests() {
       feedbackPanelSource.includes("reward_status") &&
       feedbackPanelSource.includes("formatRewardPoints") &&
       feedbackPanelSource.includes("renderFeedbackReward") &&
-      feedbackPanelSource.includes("奖励原因"),
+      feedbackPanelSource.includes("Reward reason"),
     "account feedback panel must show per-feedback reward points and reward reasons",
   );
 }

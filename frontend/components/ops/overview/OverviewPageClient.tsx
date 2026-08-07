@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Activity, Cpu, CreditCard, Database, RefreshCcw, TrendingUp, Users } from "lucide-react";
+import { Activity, Cpu, Database, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getOpsPaidConversionKpi } from "@/lib/ops-conversion";
 import { opsApi } from "@/lib/ops-api";
-import type { MembershipEntry, MembershipsPayload, SystemStatusPayload } from "@/types/ops";
+import type { SystemStatusPayload } from "@/types/ops";
 
 const OverviewCharts = dynamic(
   () => import("./OverviewCharts").then((mod) => mod.OverviewCharts),
@@ -41,22 +40,17 @@ function KpiCard({ href, icon: Icon, label, value, color, sub }: {
 export function OverviewPageClient() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SystemStatusPayload | null>(null);
-  const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
   const [funnel, setFunnel] = useState<{ steps: { key?: string; label: string; count: number; pct_of_prev?: number; uniqueActors?: number }[] } | null>(null);
-  const [growth, setGrowth] = useState<{ date: string; trial: number; paid: number; total: number; cumulative: number }[]>([]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [s, m, f] = await Promise.all([
+      const [s, f] = await Promise.all([
         opsApi.systemStatus() as Promise<SystemStatusPayload>,
-        opsApi.membershipsOverview(200, 30) as Promise<MembershipsPayload & { daily?: { date: string; trial: number; paid: number; total: number; cumulative: number }[] }>,
         opsApi.funnel(30),
       ]);
       setStatus(s);
-      setMemberships((m as MembershipsPayload).memberships ?? []);
       setFunnel(f);
-      setGrowth(m?.daily ?? []);
     } catch { /* */ }
     setLoading(false);
   };
@@ -74,12 +68,7 @@ export function OverviewPageClient() {
     </div>
   );
 
-  const paid = memberships.filter((m) => !m.is_trial).length;
-  const trials = memberships.filter((m) => m.is_trial).length;
   const steps = funnel?.steps ?? [];
-  const stepByKey = Object.fromEntries(steps.map((step) => [step.key || step.label, step]));
-  const payingUsers = stepByKey.payment_success?.count ?? 0;
-  const paidConversion = getOpsPaidConversionKpi(steps);
   const cache = status?.cache;
   const cacheAnalysis = cache?.analysis;
   const td = status?.training_data;
@@ -89,62 +78,40 @@ export function OverviewPageClient() {
 
   const cacheBuckets = cache ? [
     { name: "API", value: cache.api_cache_entries ?? 0 },
-    { name: "预报", value: cache.open_meteo_forecast_entries ?? 0 },
+    { name: "Forecast", value: cache.open_meteo_forecast_entries ?? 0 },
     { name: "METAR", value: cache.metar_entries ?? 0 },
     { name: "TAF", value: cache.taf_entries ?? 0 },
-    { name: "结算", value: cache.settlement_entries ?? 0 },
+    { name: "Settlement", value: cache.settlement_entries ?? 0 },
   ].filter((d) => d.value > 0) : [];
 
   const cachePie = cacheAnalysis ? [
-    { name: "命中", value: cacheAnalysis.cache_hits ?? 0, color: "#22c55e" },
-    { name: "未命中", value: cacheAnalysis.cache_misses ?? 0, color: "#f59e0b" },
-    { name: "强制刷新", value: cacheAnalysis.force_refresh_requests ?? 0, color: "#3b82f6" },
+    { name: "Hits", value: cacheAnalysis.cache_hits ?? 0, color: "#22c55e" },
+    { name: "Misses", value: cacheAnalysis.cache_misses ?? 0, color: "#f59e0b" },
+    { name: "Force Refresh", value: cacheAnalysis.force_refresh_requests ?? 0, color: "#3b82f6" },
   ] : [];
-
-  const memberPie = [
-    { name: "付费", value: paid, color: "#22c55e" },
-    ...(trials > 0 ? [{ name: "体验", value: trials, color: "#f59e0b" }] : []),
-  ];
-
-  const planCounts: Record<string, number> = {};
-  memberships.forEach((m) => {
-    const code = m.plan_code ?? "unknown";
-    planCounts[code] = (planCounts[code] ?? 0) + 1;
-  });
-  const planBreakdown = Object.entries(planCounts)
-    .map(([k, v]) => {
-      const label = k.startsWith("signup_trial") ? "3天体验" : k === "pro_monthly" ? "月付" : k === "pro_quarterly" ? "季付" : k === "pro_yearly" ? "年付" : k;
-      return { name: label, value: v };
-    })
-    .sort((a, b) => b.value - a.value);
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">总览</h1>
-          <p className="text-xs text-slate-500 mt-1">系统实时数据快照</p>
+          <h1 className="text-2xl font-bold text-white">Overview</h1>
+          <p className="text-xs text-slate-500 mt-1">Real-time system snapshot</p>
         </div>
         <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-          <RefreshCcw className="h-3.5 w-3.5" /> 刷新
+          <RefreshCcw className="h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <KpiCard href="/ops/system" icon={Activity} label="系统" value={status?.db?.ok ? "OK" : "FAIL"} color={status?.db?.ok ? "text-emerald-400" : "text-red-400"} />
-        <KpiCard href="/ops/memberships" icon={Users} label="付费会员" value={paid} color="text-cyan-400" sub={trials > 0 ? `+${trials} 体验` : undefined} />
-        <KpiCard href="/ops/analytics" icon={TrendingUp} label="30天转付费" value={paidConversion.rateLabel} color="text-blue-400" sub={paidConversion.subLabel} />
-        <KpiCard href="/ops/training" icon={Database} label="真值记录" value={truthRows} color="text-purple-400" sub={`${coverage?.with_truth_rows ?? 0} 城市`} />
-        <KpiCard href="/ops/payments" icon={CreditCard} label="支付成功" value={payingUsers} color="text-emerald-400" sub="30天内" />
-        <KpiCard href="/ops/system" icon={Cpu} label="概率引擎" value={status?.probability?.engine_mode ?? "—"} color="text-amber-400" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        <KpiCard href="/ops/system" icon={Activity} label="System" value={status?.db?.ok ? "OK" : "FAIL"} color={status?.db?.ok ? "text-emerald-400" : "text-red-400"} />
+        <KpiCard href="/ops/training" icon={Cpu} label="Truth Records" value={truthRows} color="text-purple-400" sub={`${coverage?.with_truth_rows ?? 0} Cities`} />
+        <KpiCard href="/ops/analytics" icon={Activity} label="30d Visits" value={steps.find((s) => s.key === "landing_view")?.count ?? 0} color="text-cyan-400" sub={`${steps.find((s) => s.key === "enter_terminal")?.count ?? 0} Terminal`} />
+        <KpiCard href="/ops/system" icon={Cpu} label="Prob. Engine" value={status?.probability?.engine_mode ?? "—"} color="text-amber-400" />
       </div>
 
       <OverviewCharts
-        growth={growth}
         steps={steps}
         cacheBuckets={cacheBuckets}
-        memberPie={memberPie}
-        planBreakdown={planBreakdown}
         cachePie={cachePie}
         cacheAnalysis={cacheAnalysis}
       />
@@ -153,7 +120,7 @@ export function OverviewPageClient() {
         {features && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">功能开关</CardTitle>
+              <CardTitle className="text-sm">Feature Flags</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-1.5">
@@ -170,25 +137,25 @@ export function OverviewPageClient() {
         {coverage && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">城市模型覆盖</CardTitle>
+              <CardTitle className="text-sm">City Model Coverage</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-xl bg-white/5 p-3 text-center">
                   <div className="text-xl font-bold text-cyan-400">{coverage.total_cities ?? 0}</div>
-                  <div className="text-[11px] text-slate-500">总城市</div>
+                  <div className="text-[11px] text-slate-500">Total Cities</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-3 text-center">
                   <div className="text-xl font-bold text-emerald-400">{coverage.with_truth_rows ?? 0}</div>
-                  <div className="text-[11px] text-slate-500">有真值</div>
+                  <div className="text-[11px] text-slate-500">Has Truth</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-3 text-center">
                   <div className="text-xl font-bold text-purple-400">{coverage.with_feature_rows ?? 0}</div>
-                  <div className="text-[11px] text-slate-500">有特征</div>
+                  <div className="text-[11px] text-slate-500">Has Features</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-3 text-center">
                   <div className="text-xl font-bold text-amber-400">{td?.truth_records?.row_count ?? 0}</div>
-                  <div className="text-[11px] text-slate-500">真值行数</div>
+                  <div className="text-[11px] text-slate-500">Truth Rows</div>
                 </div>
               </div>
             </CardContent>

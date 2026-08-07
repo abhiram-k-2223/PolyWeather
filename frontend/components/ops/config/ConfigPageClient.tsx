@@ -73,14 +73,14 @@ export function ConfigPageClient() {
         body: JSON.stringify({ key, value: newVal }),
       });
       if (res.ok) {
-        setResult(`${key} 已更新`);
+        setResult(`${key} Updated`);
         setConfigs((prev) => prev.map((c) => (c.key === key ? { ...c, value: newVal } : c)));
         setEditing((prev) => { const n = { ...prev }; delete n[key]; return n; });
       } else {
-        setResult(`保存失败: ${await res.text().catch(() => "")}`);
+        setResult(`SaveFail: ${await res.text().catch(() => "")}`);
       }
     } catch {
-      setResult("保存失败");
+      setResult("SaveFail");
     }
     setSaving(false);
   };
@@ -109,12 +109,12 @@ export function ConfigPageClient() {
         setSensitiveEditing((prev) => { const n = { ...prev }; delete n[key]; return n; });
         setSensitiveHealth(data.health ?? null);
         setSensitiveCheckedAt(new Date().toLocaleString("zh-CN", { hour12: false }));
-        setSensitiveResult(`${key} 已轮换`);
+        setSensitiveResult(`${key} Rotate`);
       } else {
-        setSensitiveResult(`轮换失败: ${await res.text().catch(() => "")}`);
+        setSensitiveResult(`RotateFail: ${await res.text().catch(() => "")}`);
       }
     } catch {
-      setSensitiveResult("轮换失败");
+      setSensitiveResult("RotateFail");
     }
     setSensitiveSaving(false);
   };
@@ -124,19 +124,19 @@ export function ConfigPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">系统配置</h1>
+        <h1 className="text-2xl font-bold text-white">System Config</h1>
         <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-          <RefreshCcw className="h-3.5 w-3.5" /> 刷新
+          <RefreshCcw className="h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>可编辑配置</CardTitle>
+          <CardTitle>Editable Config</CardTitle>
         </CardHeader>
         <CardContent>
           {configs.length === 0 ? (
-            <p className="text-slate-500 text-sm">配置 API 尚未就绪（需要后端支持）</p>
+            <p className="text-slate-500 text-sm">Config API not ready (backend support needed)</p>
           ) : (
             <div className="space-y-3">
               {configs.map((cfg) => (
@@ -157,19 +157,19 @@ export function ConfigPageClient() {
                     onClick={() => handleSave(cfg.key)}
                     className="gap-1"
                   >
-                    <Save className="h-3 w-3" /> 保存
+                    <Save className="h-3 w-3" /> Save
                   </Button>
                 </div>
               ))}
             </div>
           )}
           {result && (
-            <p className={`mt-3 text-sm ${result.includes("失败") ? "text-amber-400" : "text-emerald-400"}`}>
+            <p className={`mt-3 text-sm ${result.includes("Fail") ? "text-amber-400" : "text-emerald-400"}`}>
               {result}
             </p>
           )}
           <p className="mt-4 text-xs text-slate-500">
-            仅显示非敏感配置项。修改后立即影响当前后端进程；需要跨重启持久化的密钥请使用下方凭证轮换模块。
+            Non-sensitive config shown. Changes apply immediately; use credential rotation below for restart-persistent keys.
           </p>
         </CardContent>
       </Card>
@@ -178,12 +178,12 @@ export function ConfigPageClient() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-cyan-300" />
-            敏感凭证轮换
+            Credential Rotation
           </CardTitle>
         </CardHeader>
         <CardContent>
           {sensitiveConfigs.length === 0 ? (
-            <p className="text-slate-500 text-sm">敏感配置 API 尚未就绪。</p>
+            <p className="text-slate-500 text-sm">Sensitive config API not ready.</p>
           ) : (
             <div className="space-y-3">
               {sensitiveConfigs.map((cfg) => (
@@ -193,24 +193,24 @@ export function ConfigPageClient() {
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="text-white text-sm font-semibold">{cfg.label}</div>
                         <span className={`rounded-full px-2 py-0.5 text-[11px] ${cfg.configured ? "bg-emerald-400/10 text-emerald-300" : "bg-amber-400/10 text-amber-300"}`}>
-                          {cfg.configured ? "已配置" : "未配置"}
+                          {cfg.configured ? "Configured" : "Not Configured"}
                         </span>
                         <span className="rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] text-slate-400">
-                          {cfg.source === "environment" ? "环境变量兜底" : "DB 持久化"}
+                          {cfg.source === "environment" ? "Env Fallback" : "DB Persisted"}
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-slate-500">{cfg.description}</div>
                       <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-3">
                         <div>
-                          <span className="text-slate-500">当前值 </span>
-                          <span className="font-mono text-slate-200">{cfg.masked || "未设置"}</span>
+                          <span className="text-slate-500">Current: </span>
+                          <span className="font-mono text-slate-200">{cfg.masked || "Not Set"}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500">更新人 </span>
+                          <span className="text-slate-500">By: </span>
                           <span className="font-mono text-slate-200">{cfg.updated_by || "-"}</span>
                         </div>
                         <div>
-                          <span className="text-slate-500">更新时间 </span>
+                          <span className="text-slate-500">At: </span>
                           <span className="font-mono text-slate-200">{cfg.updated_at || "-"}</span>
                         </div>
                       </div>
@@ -222,7 +222,7 @@ export function ConfigPageClient() {
                         autoComplete="off"
                         autoCapitalize="none"
                         spellCheck={false}
-                        placeholder="输入新的 sessionId，不会回显"
+                        placeholder="Enter new sessionId (will not echo)"
                         value={sensitiveEditing[cfg.key] ?? ""}
                         onChange={(e) => setSensitiveEditing((prev) => ({ ...prev, [cfg.key]: e.target.value }))}
                         className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white font-mono outline-none focus:border-cyan-400/50"
@@ -234,33 +234,33 @@ export function ConfigPageClient() {
                         onClick={() => handleSensitiveSave(cfg.key)}
                         className="gap-1"
                       >
-                        <Save className="h-3 w-3" /> 轮换
+                        <Save className="h-3 w-3" /> Rotate
                       </Button>
                     </div>
                   </div>
                   <p className="mt-3 text-xs leading-5 text-slate-500">
-                    在 ops 页面粘贴真实的 $$ sessionId 即可；这里不是 Docker .env，不需要把 $$ 写成 $$$$。
+                    Paste the Real $$ sessionId here; this is not Docker .env. No need to write $$ as $$$$ — UI-entered values keep literal $$ and do not need Docker escaping.
                   </p>
                 </div>
               ))}
             </div>
           )}
           {sensitiveResult && (
-            <p className={`mt-3 text-sm ${sensitiveResult.includes("失败") ? "text-amber-400" : "text-emerald-400"}`}>
+            <p className={`mt-3 text-sm ${sensitiveResult.includes("Fail") ? "text-amber-400" : "text-emerald-400"}`}>
               {sensitiveResult}
             </p>
           )}
           {sensitiveHealth && (
             <div className={`mt-3 rounded-lg border px-3 py-2 text-xs ${sensitiveHealth.ok ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200" : "border-amber-400/20 bg-amber-400/10 text-amber-200"}`}>
-              AMSC 健康检查：{sensitiveHealth.ok ? "通过" : "失败"}
-              {sensitiveCheckedAt ? ` · 最近检查 ${sensitiveCheckedAt}` : ""}
-              {typeof sensitiveHealth.points === "number" ? ` · 跑道点 ${sensitiveHealth.points}` : ""}
-              {sensitiveHealth.observation_time_local ? ` · 观测 ${sensitiveHealth.observation_time_local}` : ""}
+              AMSC Health: {sensitiveHealth.ok ? "Pass" : "Fail"}
+              {sensitiveCheckedAt ? ` · Last checked ${sensitiveCheckedAt}` : ""}
+              {typeof sensitiveHealth.points === "number" ? ` · Runway points ${sensitiveHealth.points}` : ""}
+              {sensitiveHealth.observation_time_local ? ` · Obs ${sensitiveHealth.observation_time_local}` : ""}
               {sensitiveHealth.error ? ` · ${sensitiveHealth.error}` : ""}
             </div>
           )}
           <p className="mt-4 text-xs text-slate-500">
-            这里不会返回或展示明文。轮换值写入共享运行时数据库，后端和 Bot 会优先读取该值，环境变量仅作为兜底。
+            Plaintext is never returned or displayed. Rotated values are written to the shared runtime DB; Backend and Bot read this value first; the env var is only a fallback.
           </p>
         </CardContent>
       </Card>

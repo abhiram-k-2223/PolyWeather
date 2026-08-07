@@ -65,7 +65,7 @@ export function runTests() {
     "middleware should not keep a public announcement API entry after announcements move into frontend code",
   );
   assert(
-    !opsConfigSource.includes("公告类配置") &&
+    !opsConfigSource.includes("Announcement config") &&
       !opsConfigSource.includes("multiline") &&
       !opsConfigSource.includes("<textarea"),
     "ops config page should not expose update announcement editing controls",

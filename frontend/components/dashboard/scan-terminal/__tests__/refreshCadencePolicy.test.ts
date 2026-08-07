@@ -277,12 +277,6 @@ export async function runTests() {
     "terminal online-user presence should refresh slowly and pause while the browser tab is hidden",
   );
   assert(
-    dashboardSource.includes("AUTH_PROFILE_RETRY_INITIAL_DELAY_MS = 5_000") &&
-      dashboardSource.includes("AUTH_PROFILE_RETRY_POLL_MS = 30_000") &&
-      !dashboardSource.includes("}, 5000);"),
-    "terminal auth subscription retry should back off after the first retry instead of polling auth/me every 5 seconds",
-  );
-  assert(
     chartSource.includes("IntersectionObserver") &&
       chartSource.includes("shouldFetchCityDetailForChart") &&
       chartSource.includes("isChartVisible"),
@@ -295,7 +289,7 @@ export async function runTests() {
   );
   assert(
     chartSource.includes("allowStale: true") &&
-      chartCanvasSourceIncludes(chartSource, "详情暂不可用") &&
+      chartCanvasSourceIncludes(chartSource, "Details temporarily unavailable") &&
       chartCanvasSourceIncludes(chartSource, "handleRetryDetail"),
     "city detail charts should show stale cache first and expose a retryable unavailable state",
   );

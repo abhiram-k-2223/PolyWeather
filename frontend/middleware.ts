@@ -23,7 +23,6 @@ function isPublicPage(pathname: string) {
   return (
     pathname === "/" ||
     pathname.startsWith("/docs") ||
-    pathname.startsWith("/subscription-help") ||
     pathname.startsWith("/auth/login") ||
     pathname.startsWith("/auth/callback")
   );
@@ -34,7 +33,6 @@ function isPublicApi(pathname: string) {
     pathname === "/api/auth/me" ||
     pathname === "/api/analytics/events" ||
     pathname === "/api/cities" ||
-    pathname === "/api/payments/config" ||
     pathname === "/api/scan/terminal" ||
     pathname === "/api/vitals" ||
     /^\/api\/city\/[^/]+$/i.test(pathname) ||
@@ -196,7 +194,6 @@ export const config = {
     "/ops/:path*",
     "/api/auth/:path*",
     "/api/ops/:path*",
-    "/api/payments/:path*",
     "/api/system/:path*",
     "/api/city/:path*/detail:path*",
   ],

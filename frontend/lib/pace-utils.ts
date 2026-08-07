@@ -13,7 +13,7 @@ function isEnglish(locale: Locale) {
 
 export function getTodayPaceView(
   detail: CityDetail,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const hourly = detail.hourly || {};
   const times = hourly.times || [];
@@ -56,24 +56,14 @@ export function getTodayPaceView(
     delta >= 0.6 ? "warm" : delta <= -0.6 ? "cold" : "neutral";
   const badge =
     biasTone === "warm"
-      ? isEnglish(locale)
-        ? "Running hot"
-        : "跑得偏热"
+      ? "Running hot"
       : biasTone === "cold"
-        ? isEnglish(locale)
-          ? "Running cool"
-          : "跑得偏冷"
-        : isEnglish(locale)
-          ? "On track"
-          : "基本跟踪";
-  const kicker = isEnglish(locale)
-    ? `As of ${normalizeHm(detail.local_time) || detail.local_time || "--:--"}`
-    : `截至 ${normalizeHm(detail.local_time) || detail.local_time || "--:--"}`;
+        ? "Running cool"
+        : "On track";
+  const kicker = `As of ${normalizeHm(detail.local_time) || detail.local_time || "--:--"}`;
   const deltaText =
     delta === 0
-      ? isEnglish(locale)
-        ? "0.0°C vs expected"
-        : "0.0°C 相对预期"
+      ? "0.0°C vs expected"
       : `${delta > 0 ? "+" : ""}${delta.toFixed(1)}${detail.temp_symbol}`;
 
   const topObservedCandidate = [
@@ -96,9 +86,7 @@ export function getTodayPaceView(
           Math.max(projectedBase + delta, topObserved ?? projectedBase).toFixed(1),
         )
       : topObserved;
-  const paceAdjustedLabel = isEnglish(locale)
-    ? "Pace-adjusted high"
-    : "节奏修正高点";
+  const paceAdjustedLabel = "Pace-adjusted high";
   const peakWindowText =
     Number.isFinite(Number(detail.peak?.first_h)) &&
     Number.isFinite(Number(detail.peak?.last_h))
@@ -108,25 +96,15 @@ export function getTodayPaceView(
       : "--";
   const observedLabel =
     displayAirportPrimary?.temp != null || detail.airport_current?.temp != null
-      ? isEnglish(locale)
-        ? "Airport obs"
-        : "机场实测"
-      : isEnglish(locale)
-        ? "Current obs"
-        : "当前实测";
+      ? "Airport obs"
+      : "Current obs";
 
   const paceSummary =
     biasTone === "warm"
-      ? isEnglish(locale)
-        ? `The airport anchor is ${biasMagnitude.toFixed(1)}°C above the intraday curve. If that bias survives into the peak window, the day high is more likely to lean hotter than the current DEB path.`
-        : `机场主站当前比盘中曲线高 ${biasMagnitude.toFixed(1)}°C。若这段偏热节奏延续进峰值窗口，日高更容易落在当前 DEB 路径之上。`
+      ? `The airport anchor is ${biasMagnitude.toFixed(1)}°C above the intraday curve. If that bias survives into the peak window, the day high is more likely to lean hotter than the current DEB path.`
       : biasTone === "cold"
-        ? isEnglish(locale)
-          ? `The airport anchor is ${biasMagnitude.toFixed(1)}°C below the intraday curve. If that drag survives into the peak window, chasing higher buckets becomes harder.`
-          : `机场主站当前比盘中曲线低 ${biasMagnitude.toFixed(1)}°C。若这段偏冷节奏延续进峰值窗口，继续追更高温区间会更吃力。`
-        : isEnglish(locale)
-          ? "The airport anchor is still tracking the intraday curve. Let later pace and peak-window structure decide."
-          : "机场主站当前仍基本贴着盘中曲线运行，后续主要看峰值窗口内的节奏有没有进一步偏离。";
+        ? `The airport anchor is ${biasMagnitude.toFixed(1)}°C below the intraday curve. If that drag survives into the peak window, chasing higher buckets becomes harder.`
+        : "The airport anchor is still tracking the intraday curve. Let later pace and peak-window structure decide.";
 
   const clamped = Math.min(Math.max(delta, -4), 4);
   const meterLeft =

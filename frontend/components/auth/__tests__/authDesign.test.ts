@@ -12,9 +12,9 @@ export function runTests() {
   );
 
   assert(
-    source.includes("登录 PolyWeather") &&
-      source.includes("创建 PolyWeather 账号") &&
-      source.includes("创建账号并领取试用"),
+    source.includes("Log in to PolyWeather") &&
+      source.includes("Create PolyWeather account") &&
+      source.includes("Create account and start trial"),
     "auth entry copy must be product-specific and explain the signup trial path",
   );
   assert(

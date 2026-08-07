@@ -3,13 +3,13 @@ import type { UserFeedbackEntry } from "@/types/ops";
 export const FEEDBACK_STATUS_POLL_MS = 30 * 60 * 1000;
 export const FEEDBACK_STATUS_CACHE_TTL_MS = 10 * 60 * 1000;
 
-export function feedbackStatusLabel(status: string | undefined, isEn: boolean) {
+export function feedbackStatusLabel(status: string | undefined) {
   const key = String(status || "open").toLowerCase();
-  if (key === "triaged") return isEn ? "Confirmed" : "已确认";
-  if (key === "investigating") return isEn ? "In progress" : "处理中";
-  if (key === "resolved") return isEn ? "Resolved" : "已解决";
-  if (key === "closed") return isEn ? "Closed" : "已关闭";
-  return isEn ? "Received" : "已收到";
+  if (key === "triaged") return "Confirmed";
+  if (key === "investigating") return "In progress";
+  if (key === "resolved") return "Resolved";
+  if (key === "closed") return "Closed";
+  return "Received";
 }
 
 export function feedbackStatusTone(status: string | undefined) {

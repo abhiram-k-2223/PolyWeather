@@ -68,21 +68,19 @@ function compactDate(value?: string) {
   return value.slice(0, 16).replace("T", " ");
 }
 
-function categoryLabel(value?: string, isEn = false) {
+function categoryLabel(value?: string) {
   const key = String(value || "").toLowerCase();
   if (key === "bug") return "Bug";
-  if (key === "data") return isEn ? "Data" : "数据";
-  if (key === "idea") return isEn ? "Suggestion" : "建议";
-  if (key === "payment") return isEn ? "Payment" : "支付";
-  if (key === "account") return isEn ? "Account" : "账号";
-  return isEn ? "Other" : "其他";
+  if (key === "data") return "Data";
+  if (key === "idea") return "Suggestion";
+  if (key === "payment") return "Payment";
+  if (key === "account") return "Account";
+  return "Other";
 }
 
 export function UserFeedbackStatusButton({
-  isEn,
   refreshKey = 0,
 }: {
-  isEn: boolean;
   refreshKey?: number;
 }) {
   const [available, setAvailable] = useState(true);
@@ -98,12 +96,8 @@ export function UserFeedbackStatusButton({
     [entries, seenKeys],
   );
   const emptyStateText = loading
-    ? isEn
-      ? "Loading..."
-      : "加载中..."
-    : isEn
-      ? "No submitted feedback yet."
-      : "暂无已提交反馈。";
+    ? "Loading..."
+    : "No submitted feedback yet.";
 
   const load = useCallback(async (
     signal?: AbortSignal,
@@ -206,8 +200,8 @@ export function UserFeedbackStatusButton({
           });
         }}
         className="relative grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
-        title={isEn ? "Feedback status" : "反馈处理状态"}
-        aria-label={isEn ? "Feedback status" : "反馈处理状态"}
+        title="Feedback status"
+        aria-label="Feedback status"
       >
         <Bell size={13} />
         {unseenCount > 0 && (
@@ -222,10 +216,10 @@ export function UserFeedbackStatusButton({
           <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
             <div>
               <div className="text-xs font-black text-slate-950">
-                {isEn ? "Feedback updates" : "反馈处理动态"}
+                {"Feedback updates"}
               </div>
               <div className="mt-0.5 text-[11px] text-slate-500">
-                {isEn ? "Your submitted reports only" : "仅显示你提交过的反馈"}
+                {"Your submitted reports only"}
               </div>
             </div>
             <button
@@ -233,8 +227,8 @@ export function UserFeedbackStatusButton({
               onClick={() => void load(undefined, { force: true })}
               disabled={loading}
               className="grid h-7 w-7 place-items-center rounded border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-              title={isEn ? "Refresh" : "刷新"}
-              aria-label={isEn ? "Refresh feedback status" : "刷新反馈状态"}
+              title="Refresh"
+              aria-label="Refresh feedback status"
             >
               <RefreshCcw size={13} className={loading ? "animate-spin" : ""} />
             </button>
@@ -242,7 +236,7 @@ export function UserFeedbackStatusButton({
 
           {error && (
             <div className="border-b border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
-              {isEn ? "Status refresh failed: " : "状态刷新失败："}{error}
+              {"Status refresh failed: "}{error}
             </div>
           )}
 
@@ -257,20 +251,20 @@ export function UserFeedbackStatusButton({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="truncate text-xs font-bold text-slate-900">
-                        {entry.message || (isEn ? "Feedback" : "反馈")}
+                        {entry.message || "Feedback"}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
-                        <span>{categoryLabel(entry.category, isEn)}</span>
+                        <span>{categoryLabel(entry.category)}</span>
                         {entry.created_at && <span>{compactDate(entry.created_at)}</span>}
                       </div>
                     </div>
                     <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-black ${feedbackStatusTone(entry.status)}`}>
-                      {feedbackStatusLabel(entry.status, isEn)}
+                      {feedbackStatusLabel(entry.status)}
                     </span>
                   </div>
                   {entry.updated_at && entry.updated_at !== entry.created_at && (
                     <div className="mt-1 text-[11px] text-slate-500">
-                      {isEn ? "Updated " : "更新于 "}{compactDate(entry.updated_at)}
+                      {"Updated "}{compactDate(entry.updated_at)}
                     </div>
                   )}
                 </div>

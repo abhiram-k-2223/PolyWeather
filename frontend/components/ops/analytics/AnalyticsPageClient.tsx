@@ -70,12 +70,12 @@ export function AnalyticsPageClient() {
       ? ((paymentSuccess.uniqueActors / landingView.uniqueActors) * 100).toFixed(1)
       : "—";
 
-  if (loading) return <div className="text-slate-400 animate-pulse">加载中...</div>;
+  if (loading) return <div className="text-slate-400 animate-pulse">Loading...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">转化分析</h1>
+        <h1 className="text-2xl font-bold text-white">Conversion Analytics</h1>
         <div className="flex gap-2">
           {[7, 14, 30].map((d) => (
             <Button
@@ -84,11 +84,11 @@ export function AnalyticsPageClient() {
               size="sm"
               onClick={() => setDays(d)}
             >
-              {d}天
+              {d}d
             </Button>
           ))}
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-            <RefreshCcw className="h-3.5 w-3.5" /> 刷新
+            <RefreshCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </div>
@@ -97,45 +97,45 @@ export function AnalyticsPageClient() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">落地页访问</div>
+              <div className="text-xs text-slate-500">Landing page visits</div>
               <div className="text-xl font-bold text-white">{landingView?.count ?? 0}</div>
-              <div className="mt-0.5 text-xs text-slate-500">独立 {landingView?.uniqueActors ?? 0}</div>
+              <div className="mt-0.5 text-xs text-slate-500">Unique {landingView?.uniqueActors ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">进入终端</div>
+              <div className="text-xs text-slate-500">Enter terminal</div>
               <div className="text-xl font-bold text-cyan-400">{terminalEntry?.count ?? 0}</div>
-              <div className="mt-0.5 text-xs text-slate-500">独立 {terminalEntry?.uniqueActors ?? 0}</div>
+              <div className="mt-0.5 text-xs text-slate-500">Unique {terminalEntry?.uniqueActors ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">注册成功</div>
+              <div className="text-xs text-slate-500">Registration success</div>
               <div className="text-xl font-bold text-blue-500">{signupSuccess?.count ?? 0}</div>
-              <div className="mt-0.5 text-xs text-slate-500">试用 {trialCreated?.count ?? 0}</div>
+              <div className="mt-0.5 text-xs text-slate-500">Trial {trialCreated?.count ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">发起支付</div>
+              <div className="text-xs text-slate-500">Payment Started</div>
               <div className="text-xl font-bold text-amber-400">{paymentStart?.count ?? 0}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">支付成功</div>
+              <div className="text-xs text-slate-500">Payment Success</div>
               <div className="text-xl font-bold text-emerald-400">{paymentSuccess?.count ?? 0}</div>
               <div className="mt-0.5 text-xs text-slate-500">
-                总体转化 {overallRate === "—" ? "—" : `${overallRate}%`}
+                Overall Conversion {overallRate === "—" ? "—" : `${overallRate}%`}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-xs text-slate-500">鉴权降级</div>
+              <div className="text-xs text-slate-500">Auth degraded</div>
               <div className="text-xl font-bold text-rose-500">{degradedAuth.total ?? 0}</div>
-              <div className="mt-0.5 text-xs text-slate-500">独立 {degradedAuth.unique_actors ?? 0}</div>
+              <div className="mt-0.5 text-xs text-slate-500">Unique {degradedAuth.unique_actors ?? 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -143,19 +143,19 @@ export function AnalyticsPageClient() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
         <Card>
-          <CardHeader><CardTitle>来源与设备</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Source & device</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-4">
               {[
-                ["来源", traffic.referrers ?? []],
-                ["国家/地区", traffic.countries ?? []],
-                ["设备", traffic.devices ?? []],
-                ["落地页路径", traffic.landing_paths ?? []],
+                ["Source", traffic.referrers ?? []],
+                ["Country", traffic.countries ?? []],
+                ["Device", traffic.devices ?? []],
+                ["Landing Path", traffic.landing_paths ?? []],
               ].map(([title, rows]) => (
                 <div key={String(title)} className="space-y-2">
                   <div className="text-xs font-bold text-slate-500">{String(title)}</div>
                   {(rows as TopItem[]).length === 0 ? (
-                    <div className="text-xs text-slate-500">暂无数据</div>
+                    <div className="text-xs text-slate-500">No Data</div>
                   ) : (
                     <ul className="space-y-1.5">
                       {(rows as TopItem[]).slice(0, 5).map((item) => (
@@ -173,10 +173,10 @@ export function AnalyticsPageClient() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>鉴权降级原因</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Auth Degradation Reasons</CardTitle></CardHeader>
           <CardContent>
             {(degradedAuth.by_reason ?? []).length === 0 ? (
-              <p className="text-sm text-slate-500">暂无 degraded_auth_profile</p>
+              <p className="text-sm text-slate-500">No degraded_auth_profile</p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {(degradedAuth.by_reason ?? []).map((item) => (
@@ -192,10 +192,10 @@ export function AnalyticsPageClient() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>转化漏斗</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Conversion Funnel</CardTitle></CardHeader>
         <CardContent>
           {chartData.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">暂无数据</p>
+            <p className="py-8 text-center text-sm text-slate-500">No Data</p>
           ) : (
             <AnalyticsFunnelChart data={chartData} />
           )}
@@ -203,17 +203,17 @@ export function AnalyticsPageClient() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>各阶段详情</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Stage Details</CardTitle></CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10 text-left text-slate-400">
-                  <th className="px-3 py-2 font-medium">阶段</th>
-                  <th className="px-3 py-2 text-right font-medium">次数</th>
-                  <th className="px-3 py-2 text-right font-medium">独立用户/访客</th>
-                  <th className="px-3 py-2 text-right font-medium">转化率</th>
-                  <th className="px-3 py-2 text-right font-medium">流失率</th>
+                  <th className="px-3 py-2 font-medium">Stage</th>
+                  <th className="px-3 py-2 text-right font-medium">Count</th>
+                  <th className="px-3 py-2 text-right font-medium">Unique Users</th>
+                  <th className="px-3 py-2 text-right font-medium">Conv. Rate</th>
+                  <th className="px-3 py-2 text-right font-medium">Drop Rate</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,7 +235,7 @@ export function AnalyticsPageClient() {
           </div>
           {rates ? (
             <p className="mt-3 text-xs text-slate-500">
-              rates 以 unique actors 计算，次数用于观察重复尝试和重试行为。
+              Rates are based on unique actors; Count captures retry and repeat behavior.
             </p>
           ) : null}
         </CardContent>

@@ -6,51 +6,41 @@ import {
   LayoutDashboard,
   Cpu,
   Database,
-  CreditCard,
-  Users,
-  UserCheck,
   BarChart3,
   Settings,
   FileText,
-  ScrollText,
   Activity,
-  ShieldAlert,
   MessageSquare,
 } from "lucide-react";
 
 const navGroups = [
   {
-    label: "监控",
+    label: "Monitoring",
     items: [
-      { href: "/ops/overview", icon: LayoutDashboard, label: "总览" },
-      { href: "/ops/health", icon: Activity, label: "API 状态" },
-      { href: "/ops/system", icon: Cpu, label: "系统状态" },
-      { href: "/ops/training", icon: Database, label: "训练数据" },
-      { href: "/ops/analytics", icon: BarChart3, label: "转化分析" },
+      { href: "/ops/overview", icon: LayoutDashboard, label: "Overview" },
+      { href: "/ops/health", icon: Activity, label: "API Status" },
+      { href: "/ops/system", icon: Cpu, label: "System" },
+      { href: "/ops/training", icon: Database, label: "Training" },
+      { href: "/ops/analytics", icon: BarChart3, label: "Analytics" },
     ],
   },
   {
-    label: "运营",
+    label: "Operations",
     items: [
-      { href: "/ops/payments", icon: CreditCard, label: "支付管理" },
-      { href: "/ops/memberships", icon: UserCheck, label: "会员订阅" },
-      { href: "/ops/feedback", icon: MessageSquare, label: "用户反馈" },
-      { href: "/ops/telegram-audit", icon: ShieldAlert, label: "电报清理" },
-      { href: "/ops/users", icon: Users, label: "用户积分" },
+      { href: "/ops/feedback", icon: MessageSquare, label: "Feedback" },
     ],
   },
   {
-    label: "管理",
+    label: "Admin",
     items: [
-      { href: "/ops/config", icon: Settings, label: "系统配置" },
-      { href: "/ops/subscriptions", icon: ScrollText, label: "订阅操作" },
-      { href: "/ops/view-logs", icon: FileText, label: "日志查看" },
+      { href: "/ops/config", icon: Settings, label: "Config" },
+      { href: "/ops/view-logs", icon: FileText, label: "Logs" },
     ],
   },
   {
-    label: "历史",
+    label: "History",
     items: [
-      { href: "/ops/truth-history", icon: Activity, label: "真值历史" },
+      { href: "/ops/truth-history", icon: Activity, label: "Truth History" },
     ],
   },
 ];
@@ -101,7 +91,7 @@ export function AdminSidebar() {
           href="/"
           className="flex items-center gap-2 text-xs font-semibold text-slate-500 transition-colors hover:text-blue-700"
         >
-          ← 返回前台
+          ← Back to Site
         </Link>
       </div>
     </aside>

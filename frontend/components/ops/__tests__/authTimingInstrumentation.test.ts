@@ -13,8 +13,9 @@ export function runTests() {
   );
 
   assert(
-    authMeRouteSource.includes("createAuthMeTimer") &&
-      authMeRouteSource.includes("finishAuthMeResponse"),
+    authMeRouteSource.includes("authMeNowMs") &&
+      authMeRouteSource.includes("const measure = async") &&
+      authMeRouteSource.includes("stages.push"),
     "/api/auth/me proxy must centralize timing so every return path can emit instrumentation",
   );
   assert(
@@ -27,23 +28,23 @@ export function runTests() {
   assert(
     authMeRouteSource.includes('response.headers.set("Cache-Control", "no-store")') &&
       authMeRouteSource.indexOf('response.headers.set("Cache-Control", "no-store")') >
-        authMeRouteSource.indexOf("function finishAuthMeResponse"),
+        authMeRouteSource.indexOf("const response = res.ok"),
     "/api/auth/me proxy must mark every auth profile response no-store so anonymous state cannot be reused after login",
   );
-  const finishStart = authMeRouteSource.indexOf("function finishAuthMeResponse");
-  const finishEnd = authMeRouteSource.indexOf("async function trackAuthDiagnosticEvent");
-  const finishSource =
-    finishStart >= 0 && finishEnd > finishStart
-      ? authMeRouteSource.slice(finishStart, finishEnd)
+  const timingLogStart = authMeRouteSource.indexOf("console.info");
+  const timingLogEnd = authMeRouteSource.indexOf("return applyAuthResponseCookies");
+  const timingLogSource =
+    timingLogStart >= 0 && timingLogEnd > timingLogStart
+      ? authMeRouteSource.slice(timingLogStart, timingLogEnd)
       : "";
   assert(
-    finishSource.includes("[auth-me-timing]") &&
-      finishSource.includes("hasAuthorization") &&
-      finishSource.includes("hasSupabaseCookie") &&
-      !finishSource.includes("authUserId") &&
-      !finishSource.includes("authEmail") &&
-      !finishSource.includes("userId") &&
-      !finishSource.includes("email"),
+    timingLogSource.includes("[auth-me-timing]") &&
+      timingLogSource.includes("hasAuthorization") &&
+      timingLogSource.includes("hasSupabaseCookie") &&
+      !timingLogSource.includes("authUserId") &&
+      !timingLogSource.includes("authEmail") &&
+      !timingLogSource.includes("userId") &&
+      !timingLogSource.includes("email"),
     "/api/auth/me proxy timing logs must include request shape but avoid raw user ids or emails",
   );
 }

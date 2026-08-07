@@ -33,6 +33,8 @@ def bump(parts: tuple[int, int, int], level: str) -> tuple[int, int, int]:
 
 
 def ensure_changelog_entry(version: str) -> None:
+    if not CHANGELOG_FILE.exists():
+        return
     text = CHANGELOG_FILE.read_text(encoding="utf-8")
     if re.search(rf"^## {re.escape(version)} - ", text, flags=re.MULTILINE):
         return

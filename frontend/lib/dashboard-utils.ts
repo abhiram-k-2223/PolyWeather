@@ -99,7 +99,7 @@ export function parseAiAnalysis(analysis: CityDetail["ai_analysis"]) {
 
 export function getAirportNarrative(
   detail: CityDetail,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const parsed = parseAiAnalysis(detail.ai_analysis);
   if (!isEnglish(locale)) return parsed;
@@ -318,24 +318,14 @@ function trendBucketFromDir(direction?: number | null) {
   return "westerly";
 }
 
-function bucketLabel(bucket: string | null, locale: Locale = "zh-CN") {
-  if (isEnglish(locale)) {
-    return (
-      {
-        southerly: "S / SW wind",
-        northerly: "N / NW wind",
-        easterly: "E wind",
-        westerly: "W wind",
-      }[bucket || ""] || "Unknown wind direction"
-    );
-  }
+function bucketLabel(bucket: string | null, locale: Locale = "en-US") {
   return (
     {
-      southerly: "南 / 西南风",
-      northerly: "北 / 西北风",
-      easterly: "东风",
-      westerly: "西风",
-    }[bucket || ""] || "风向不明"
+      southerly: "S / SW wind",
+      northerly: "N / NW wind",
+      easterly: "E wind",
+      westerly: "W wind",
+    }[bucket || ""] || "Unknown wind direction"
   );
 }
 
@@ -364,36 +354,30 @@ function getForecastTextForDate(detail: CityDetail, dateStr: string) {
 export function computeFrontTrendSignal(
   detail: CityDetail,
   dateStr: string,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const upperAirSignal = detail.vertical_profile_signal || {};
   const tafSignal = detail.taf?.signal || {};
   const upperAirTradeCue = upperAirSignal.source
     ? upperAirSignal.heating_setup === "supportive"
       ? {
-          label: isEnglish(locale) ? "Trade cue" : "交易动作",
-          note: isEnglish(locale)
-            ? "The setup still supports further warming. Do not call the high too early."
-            : "结构仍支持继续升温，别太早押高温见顶。",
+          label: 'Trade cue',
+          note: 'The setup still supports further warming. Do not call the high too early.',
           tone: "warm",
-          value: isEnglish(locale) ? "Lean warmer" : "偏暖侧",
+          value: 'Lean warmer',
         }
       : upperAirSignal.heating_setup === "suppressed"
         ? {
-            label: isEnglish(locale) ? "Trade cue" : "交易动作",
-            note: isEnglish(locale)
-              ? "Further upside looks less reliable. Do not chase the high blindly."
-              : "高温继续上冲的把握不大，别盲目追热。",
+            label: 'Trade cue',
+            note: 'Further upside looks less reliable. Do not chase the high blindly.',
             tone: "cold",
-            value: isEnglish(locale) ? "Lean cautious" : "偏谨慎",
+            value: 'Lean cautious',
           }
         : {
-            label: isEnglish(locale) ? "Trade cue" : "交易动作",
-            note: isEnglish(locale)
-              ? "The picture is still mixed. Let the next move decide first."
-              : "现在还看不出明确方向，先等下一步走势确认。",
+            label: 'Trade cue',
+            note: 'The picture is still mixed. Let the next move decide first.',
             tone: "",
-            value: isEnglish(locale) ? "Wait / confirm" : "先观察",
+            value: 'Wait / confirm',
           }
     : null;
   const baseUpperAirSummary = upperAirSignal.source
@@ -404,23 +388,15 @@ export function computeFrontTrendSignal(
           upperAirSignal.boundary_layer_height_max != null ||
           upperAirSignal.shear_10m_180m_max != null;
         if (!hasMetrics) {
-          return isEnglish(locale)
-            ? "Upper-air inputs are incomplete. For now, trade direction should rely more on surface structure."
-            : "高空输入还不完整，当前交易方向先更多参考近地面结构信号。";
+          return 'Upper-air inputs are incomplete. For now, trade direction should rely more on surface structure.';
         }
         if (upperAirSignal.heating_setup === "supportive") {
-          return isEnglish(locale)
-            ? "Upper-air structure still favors further warming. Do not call the high too early."
-            : "高空结构仍偏向继续增温，别太早押高温见顶。";
+          return 'Upper-air structure still favors further warming. Do not call the high too early.';
         }
         if (upperAirSignal.heating_setup === "suppressed") {
-          return isEnglish(locale)
-            ? "Upper-air structure leans toward capping the afternoon high. Further upside looks less reliable."
-            : "高空结构更偏向压住午后峰值，高温继续上冲的把握不大。";
+          return 'Upper-air structure leans toward capping the afternoon high. Further upside looks less reliable.';
         }
-        return isEnglish(locale)
-          ? "Upper-air structure is fairly neutral. It does not provide a clean edge yet."
-          : "高空结构整体偏中性，暂时还给不出明确方向。";
+        return 'Upper-air structure is fairly neutral. It does not provide a clean edge yet.';
       })()
     : "";
   const tafSummary =
@@ -463,12 +439,10 @@ export function computeFrontTrendSignal(
   if (!slice.length) {
     const fallbackSummary =
       backendSummary ||
-      (isEnglish(locale)
-        ? "Insufficient intraday structured data. Keep baseline monitoring."
-        : "当日日内结构化数据不足，暂时只保留基础监控。");
+      ('Insufficient intraday structured data. Keep baseline monitoring.');
     return {
       confidence: "low",
-      label: isEnglish(locale) ? "Monitoring" : "监控中",
+      label: 'Monitoring',
       metrics: [] as Array<{
         label: string;
         note: string;
@@ -611,23 +585,14 @@ export function computeFrontTrendSignal(
     const range = `${normalizeHm(marker.start_local) || "--:--"}-${normalizeHm(marker.end_local) || "--:--"}`;
     const typeLabel = formatTafMarkerType(
       String(marker.marker_type || ""),
-      locale,
     );
     const level = String(marker.suppression_level || "low").toLowerCase();
-    const statusText = isEnglish(locale)
-      ? level === "high"
+    const statusText = level === "high"
         ? "shows shower or thunderstorm disruption"
         : level === "medium"
           ? "shows cloud or light-rain disruption"
-          : "stays relatively stable"
-      : level === "high"
-        ? "有阵雨或雷暴扰动"
-        : level === "medium"
-          ? "有云量或弱降水扰动"
-          : "以稳定为主";
-    return isEnglish(locale)
-      ? `${typeLabel} (${range}), ${statusText}.`
-      : `${typeLabel}（${range}），${statusText}。`;
+          : "stays relatively stable";
+    return `${typeLabel} (${range}), ${statusText}.`;
   };
   const peakWindowTafMarker =
     tafSignal.available &&
@@ -653,39 +618,27 @@ export function computeFrontTrendSignal(
       ? peakTafSummary
       : "";
   const currentTafLine = currentTafMarker
-    ? isEnglish(locale)
-      ? `Use current TAF as primary: ${formatTafSegmentBody(currentTafMarker, "current")}`
-      : `以当前 TAF 为准：${formatTafSegmentBody(currentTafMarker, "current")}`
+    ? `Use current TAF as primary: ${formatTafSegmentBody(currentTafMarker, "current")}`
     : nextTafMarker
-      ? isEnglish(locale)
-        ? `Use next TAF segment as primary: ${formatTafSegmentBody(nextTafMarker, "next")}`
-        : `以下一段 TAF 为准：${formatTafSegmentBody(nextTafMarker, "next")}`
+      ? `Use next TAF segment as primary: ${formatTafSegmentBody(nextTafMarker, "next")}`
       : "";
-  const currentTafLineForSummary = currentTafLine.replace(/^Use (current|next) TAF (as primary|segment as primary):\s*/i, "").replace(/^以(当前|下一段) TAF 为准：/, "");
+  const currentTafLineForSummary = currentTafLine.replace(/^Use (current|next) TAF (as primary|segment as primary):\s*/i, "");
   const peakTafLine =
     effectivePeakTafSummary && peakWindowTafMarker
-      ? isEnglish(locale)
-        ? `Peak-window reference: ${formatTafSegmentBody(peakWindowTafMarker, "peak")}`
-        : `峰值窗口参考：${formatTafSegmentBody(peakWindowTafMarker, "peak")}`
+      ? `Peak-window reference: ${formatTafSegmentBody(peakWindowTafMarker, "peak")}`
       : "";
-  const peakTafLineForSummary = peakTafLine.replace(/^Peak-window reference:\s*/i, "").replace(/^峰值窗口参考：/, "");
+  const peakTafLineForSummary = peakTafLine.replace(/^Peak-window reference:\s*/i, "");
   const tafFallbackSummary =
     currentTafLine || peakTafLine ? "" : tafSummary;
   const tafPrimarySummary = currentTafMarker
-    ? isEnglish(locale)
-      ? `Use current TAF as primary: ${currentTafLineForSummary}`
-      : `以当前 TAF 为准：${currentTafLineForSummary}`
+    ? `Use current TAF as primary: ${currentTafLineForSummary}`
     : nextTafMarker
-      ? isEnglish(locale)
-        ? `Use next TAF segment as primary: ${currentTafLineForSummary}`
-        : `以下一段 TAF 为准：${currentTafLineForSummary}`
+      ? `Use next TAF segment as primary: ${currentTafLineForSummary}`
       : "";
   const tafReferenceSummary =
     peakTafLineForSummary &&
     peakTafLineForSummary !== currentTafLineForSummary
-      ? isEnglish(locale)
-        ? `Peak-window reference: ${peakTafLineForSummary}`
-        : `峰值窗口参考：${peakTafLineForSummary}`
+      ? `Peak-window reference: ${peakTafLineForSummary}`
       : "";
   upperAirSummary = [
     baseUpperAirSummary,
@@ -694,18 +647,16 @@ export function computeFrontTrendSignal(
     tafFallbackSummary,
   ]
     .filter(Boolean)
-    .join(isEnglish(locale) ? " " : "");
+    .join();
   tafMetric =
     tafSignal.available && dateStr === detail.local_date
       ? {
-          label: isEnglish(locale) ? "Airport TAF" : "机场预报",
+          label: 'Airport TAF',
           note:
             tafPrimarySummary ||
             tafReferenceSummary ||
             tafFallbackSummary ||
-            (isEnglish(locale)
-              ? "Airport TAF is available for the current peak window."
-              : "当前峰值窗口已接入机场 TAF 预报。"),
+            ('Airport TAF is available for the current peak window.'),
           tone:
             tafSignal.suppression_level === "high"
               ? "cold"
@@ -714,35 +665,23 @@ export function computeFrontTrendSignal(
                 : "",
           value:
             tafSignal.suppression_level === "high"
-              ? isEnglish(locale)
-                ? "Suppression watch"
-                : "防压温"
+              ? 'Suppression watch'
               : tafSignal.suppression_level === "medium"
-                ? isEnglish(locale)
-                  ? "Watch clouds/rain"
-                  : "看云雨"
-                : isEnglish(locale)
-                  ? "Mostly stable"
-                  : "暂稳",
+                ? 'Watch clouds/rain'
+                : 'Mostly stable',
         }
       : null;
   upperAirMetrics = upperAirSignal.source
     ? [
         ...(upperAirTradeCue ? [upperAirTradeCue] : []),
         {
-          label: isEnglish(locale) ? "Peak setup" : "冲高环境",
+          label: 'Peak setup',
           note:
             upperAirSignal.heating_setup === "supportive"
-              ? isEnglish(locale)
-                ? "Still supportive of more daytime heating. Do not call the high too early."
-                : "结构仍支持白天继续升温，别太早押高温见顶。"
+              ? 'Still supportive of more daytime heating. Do not call the high too early.'
               : upperAirSignal.heating_setup === "suppressed"
-                ? isEnglish(locale)
-                  ? "Leans toward capping the afternoon peak. Further upside looks less reliable."
-                  : "更偏向压住午后峰值，高温继续上冲的把握不大。"
-                : isEnglish(locale)
-                  ? "Neutral on its own. It does not provide a clear directional edge yet."
-                  : "单看这层偏中性，暂时还没有明确方向优势。",
+                ? 'Leans toward capping the afternoon peak. Further upside looks less reliable.'
+                : 'Neutral on its own. It does not provide a clear directional edge yet.',
           tone:
             upperAirSignal.heating_setup === "supportive"
               ? "warm"
@@ -751,27 +690,17 @@ export function computeFrontTrendSignal(
                 : "",
           value:
             upperAirSignal.heating_setup === "supportive"
-              ? isEnglish(locale)
-                ? "Supportive"
-                : "偏支持"
+              ? 'Supportive'
               : upperAirSignal.heating_setup === "suppressed"
-                ? isEnglish(locale)
-                  ? "Suppressed"
-                  : "偏压制"
-                : isEnglish(locale)
-                  ? "Neutral"
-                  : "中性",
+                ? 'Suppressed'
+                : 'Neutral',
         },
         {
-          label: isEnglish(locale) ? "Peak suppression risk" : "压温风险",
+          label: 'Peak suppression risk',
           note:
             upperAirSignal.cape_max != null || upperAirSignal.cin_min != null
-              ? isEnglish(locale)
-                ? `How likely clouds or showers are to cap the high. CAPE ${Math.round(Number(upperAirSignal.cape_max ?? 0))}, CIN ${Number(upperAirSignal.cin_min ?? 0).toFixed(0)}.`
-                : `看云和阵雨有多大概率把峰值压住。CAPE ${Math.round(Number(upperAirSignal.cape_max ?? 0))}，CIN ${Number(upperAirSignal.cin_min ?? 0).toFixed(0)}。`
-              : isEnglish(locale)
-                ? "Estimated from the next 48h upper-air profile."
-                : "根据未来 48 小时高空剖面估算。",
+              ? `How likely clouds or showers are to cap the high. CAPE ${Math.round(Number(upperAirSignal.cape_max ?? 0))}, CIN ${Number(upperAirSignal.cin_min ?? 0).toFixed(0)}.`
+              : 'Estimated from the next 48h upper-air profile.',
           tone:
             upperAirSignal.suppression_risk === "high"
               ? "cold"
@@ -780,27 +709,17 @@ export function computeFrontTrendSignal(
                 : "",
           value:
             upperAirSignal.suppression_risk === "high"
-              ? isEnglish(locale)
-                ? "High"
-                : "高"
+              ? 'High'
               : upperAirSignal.suppression_risk === "medium"
-                ? isEnglish(locale)
-                  ? "Medium"
-                  : "中"
-                : isEnglish(locale)
-                  ? "Low"
-                  : "低",
+                ? 'Medium'
+                : 'Low',
         },
         {
-          label: isEnglish(locale) ? "Afternoon disruption" : "午后扰动",
+          label: 'Afternoon disruption',
           note:
             upperAirSignal.lifted_index_min != null
-              ? isEnglish(locale)
-                ? `How easily the afternoon can turn noisy. Lifted Index ${Number(upperAirSignal.lifted_index_min).toFixed(1)}.`
-                : `看午后是否容易突然起云、起对流，把走势搅乱。Lifted Index ${Number(upperAirSignal.lifted_index_min).toFixed(1)}。`
-              : isEnglish(locale)
-                ? "Uses instability and lifted-index structure."
-                : "结合不稳定能量与抬升指数判断。",
+              ? `How easily the afternoon can turn noisy. Lifted Index ${Number(upperAirSignal.lifted_index_min).toFixed(1)}.`
+              : 'Uses instability and lifted-index structure.',
           tone:
             upperAirSignal.trigger_risk === "high"
               ? "cold"
@@ -809,27 +728,17 @@ export function computeFrontTrendSignal(
                 : "",
           value:
             upperAirSignal.trigger_risk === "high"
-              ? isEnglish(locale)
-                ? "High"
-                : "高"
+              ? 'High'
               : upperAirSignal.trigger_risk === "medium"
-                ? isEnglish(locale)
-                  ? "Medium"
-                  : "中"
-                : isEnglish(locale)
-                  ? "Low"
-                  : "低",
+                ? 'Medium'
+                : 'Low',
         },
         {
-          label: isEnglish(locale) ? "Heating efficiency" : "冲高效率",
+          label: 'Heating efficiency',
           note:
             upperAirSignal.boundary_layer_height_max != null
-              ? isEnglish(locale)
-                ? `How efficiently surface warmth can keep translating upward. Mixing depth peaks near ${Math.round(Number(upperAirSignal.boundary_layer_height_max))} m.`
-                : `看地面热量能不能持续往上送，决定冲高效率。混合层高度峰值约 ${Math.round(Number(upperAirSignal.boundary_layer_height_max))} 米。`
-              : isEnglish(locale)
-                ? "Tracks daytime mixing depth."
-                : "跟踪白天混合层深度。",
+              ? `How efficiently surface warmth can keep translating upward. Mixing depth peaks near ${Math.round(Number(upperAirSignal.boundary_layer_height_max))} m.`
+              : 'Tracks daytime mixing depth.',
           tone:
             upperAirSignal.mixing_strength === "strong"
               ? "warm"
@@ -838,16 +747,10 @@ export function computeFrontTrendSignal(
                 : "",
           value:
             upperAirSignal.mixing_strength === "strong"
-              ? isEnglish(locale)
-                ? "Strong"
-                : "强"
+              ? 'Strong'
               : upperAirSignal.mixing_strength === "medium"
-                ? isEnglish(locale)
-                  ? "Medium"
-                  : "中"
-                : isEnglish(locale)
-                  ? "Weak"
-                  : "弱",
+                ? 'Medium'
+                : 'Weak',
         },
         ...(tafMetric ? [tafMetric] : []),
       ]
@@ -894,21 +797,13 @@ export function computeFrontTrendSignal(
   const last = workingSlice[workingSlice.length - 1] || slice[slice.length - 1];
   const effectiveHours = Math.max(1, workingSlice.length);
   const windowLabel = `${first?.label || "--"}-${last?.label || "--"}`;
-  const windowText = isEnglish(locale)
-    ? usingPeakWindow
+  const windowText = usingPeakWindow
       ? `today ${windowLabel} (~${effectiveHours}h, around peak window)`
       : usingSunsetWindow
       ? `today ${windowLabel} (~${effectiveHours}h, now -> sunset)`
       : isTargetToday
         ? `today ${windowLabel} (~${effectiveHours}h)`
-        : `daily ${windowLabel} (~${effectiveHours}h)`
-    : usingPeakWindow
-      ? `今日 ${windowLabel}（约 ${effectiveHours} 小时，围绕峰值窗口）`
-      : usingSunsetWindow
-      ? `今日 ${windowLabel}（约 ${effectiveHours} 小时，当前至日落）`
-      : isTargetToday
-        ? `今日 ${windowLabel}（约 ${effectiveHours} 小时）`
-        : `当日日内 ${windowLabel}（约 ${effectiveHours} 小时）`;
+        : `daily ${windowLabel} (~${effectiveHours}h)`;
   const firstTemp = Number.isFinite(Number(first.temp)) ? Number(first.temp) : currentTemp;
   const lastTemp = Number.isFinite(Number(last.temp)) ? Number(last.temp) : firstTemp;
   const tempDelta =
@@ -1027,24 +922,14 @@ export function computeFrontTrendSignal(
       : "unknown";
   const precipWindowSummary = (() => {
     if (!primaryPrecipWindow) {
-      return isEnglish(locale)
-        ? "No concentrated model precipitation window is visible yet."
-        : "模型里暂时还看不出明显集中的降水窗口。";
+      return 'No concentrated model precipitation window is visible yet.';
     }
-    const overlapText = isEnglish(locale)
-      ? precipOverlapLevel === "high"
+    const overlapText = precipOverlapLevel === "high"
         ? "It overlaps heavily with the peak window."
         : precipOverlapLevel === "medium"
           ? "It overlaps part of the peak window."
-          : "It sits mostly outside the peak window."
-      : precipOverlapLevel === "high"
-        ? "与峰值窗口重叠较高。"
-        : precipOverlapLevel === "medium"
-          ? "与峰值窗口部分重叠。"
-          : "主要落在峰值窗口之外。";
-    return isEnglish(locale)
-      ? `Model precipitation window is ${precipWindowLabel}, peaking near ${Math.round(primaryPrecipWindow.peak)}%. ${overlapText}`
-      : `模型降水窗口在 ${precipWindowLabel}，峰值约 ${Math.round(primaryPrecipWindow.peak)}%。${overlapText}`;
+          : "It sits mostly outside the peak window.";
+    return `Model precipitation window is ${precipWindowLabel}, peaking near ${Math.round(primaryPrecipWindow.peak)}%. ${overlapText}`;
   })();
   const firstBucket = trendBucketFromDir(first.windDir);
   const lastBucket = trendBucketFromDir(last.windDir);
@@ -1087,54 +972,32 @@ export function computeFrontTrendSignal(
   }
 
   const score = Math.max(-100, Math.min(100, warmScore - coldScore));
-  const warmLabel = isEnglish(locale) ? "Near-term warming bias" : "未来偏升温";
-  const coldLabel = isEnglish(locale) ? "Near-term cooling bias" : "未来偏降温";
-  const monitorLabel = isEnglish(locale) ? "Direction unclear" : "方向不清";
+  const warmLabel = 'Near-term warming bias';
+  const coldLabel = 'Near-term cooling bias';
+  const monitorLabel = 'Direction unclear';
   const label = score >= 18 ? warmLabel : score <= -18 ? coldLabel : monitorLabel;
   const confidence =
     Math.abs(score) >= 45 ? "high" : Math.abs(score) >= 22 ? "medium" : "low";
   const directionalLead = (() => {
-    if (isEnglish(locale)) {
-      if (score >= 18 && tempDelta >= 0.5) {
-        return `Over ${windowText}, temperatures still lean warmer.`;
-      }
-      if (score <= -18 && tempDelta <= -0.5) {
-        return `Over ${windowText}, temperatures still lean cooler.`;
-      }
-      if (score >= 18) {
-        return `Over ${windowText}, the structure still leans warmer, but the warming pace is not strong yet.`;
-      }
-      if (score <= -18) {
-        return `Over ${windowText}, the structure still leans cooler, but the cooling pace is not decisive yet.`;
-      }
-      if (tempDelta >= 0.8) {
-        return `Over ${windowText}, temperatures still lean warmer, but confidence is limited.`;
-      }
-      if (tempDelta <= -0.8) {
-        return `Over ${windowText}, temperatures still lean cooler, but confidence is limited.`;
-      }
-      return `Over ${windowText}, temperatures are more likely to stay range-bound for now.`;
-    }
-
     if (score >= 18 && tempDelta >= 0.5) {
-      return `${windowText}偏增温，后续更可能继续往上走。`;
+      return `Over ${windowText}, temperatures still lean warmer.`;
     }
     if (score <= -18 && tempDelta <= -0.5) {
-      return `${windowText}偏降温，后续更可能继续往下走。`;
+      return `Over ${windowText}, temperatures still lean cooler.`;
     }
     if (score >= 18) {
-      return `${windowText}仍偏增温，但增温兑现力度暂时不算强。`;
+      return `Over ${windowText}, the structure still leans warmer, but the warming pace is not strong yet.`;
     }
     if (score <= -18) {
-      return `${windowText}仍偏降温，但降温兑现力度暂时不算强。`;
+      return `Over ${windowText}, the structure still leans cooler, but the cooling pace is not decisive yet.`;
     }
     if (tempDelta >= 0.8) {
-      return `${windowText}略偏增温，但结构信号置信度有限。`;
+      return `Over ${windowText}, temperatures still lean warmer, but confidence is limited.`;
     }
     if (tempDelta <= -0.8) {
-      return `${windowText}略偏降温，但结构信号置信度有限。`;
+      return `Over ${windowText}, temperatures still lean cooler, but confidence is limited.`;
     }
-    return `${windowText}更像震荡整理，短时升降温方向暂不清晰。`;
+    return `Over ${windowText}, temperatures are more likely to stay range-bound for now.`;
   })();
   const summary = (() => {
     const parts: string[] = [];
@@ -1185,55 +1048,9 @@ export function computeFrontTrendSignal(
       } else {
         parts.push(`Core judgement remains focused on ${windowText}.`);
       }
-    } else {
-      parts.push(directionalLead);
-
-      if (lastBucket === "southerly" && firstBucket !== "southerly") {
-        parts.push("低层风向更偏南，暖空气输送权重上升。");
-      } else if (lastBucket === "northerly" && firstBucket !== "northerly") {
-        parts.push("低层风向转偏北，冷空气影响权重上升。");
-      }
-
-      if (tempDelta >= 0.8) {
-        parts.push(`气温抬升 ${formatDelta(tempDelta, detail.temp_symbol)}。`);
-      } else if (tempDelta <= -0.8) {
-        parts.push(`气温回落 ${formatDelta(tempDelta, detail.temp_symbol)}。`);
-      }
-
-      if (dewDelta >= 0.8) {
-        parts.push("露点同步上升，说明暖湿输送在增强。");
-      } else if (dewDelta <= -0.8) {
-        parts.push("露点回落，低层空气在转干。");
-      }
-
-      if (cloudDelta >= 15) {
-        parts.push("云量正在增多。");
-      } else if (cloudDelta <= -15) {
-        parts.push("云量正在回落。");
-      }
-
-      if (pressureDelta >= 1) {
-        parts.push("气压回升，更偏向冷空气压入。");
-      } else if (pressureDelta <= -1) {
-        parts.push("气压走低，对增温压制减弱。");
-      }
-
-      if (precipMax >= 50) {
-        parts.push(
-          primaryPrecipWindow
-            ? `模型降水窗口主要落在 ${precipWindowLabel}。`
-            : "降水概率已足以关注云雨压温。",
-        );
-      }
-
-      if (!parts.length) {
-        parts.push(`结构信号分化较大，核心仍围绕${windowText}观察。`);
-      } else {
-        parts.push(`核心判断窗口仍以${windowText}为主。`);
-      }
     }
 
-    return parts.join(isEnglish(locale) ? " " : "");
+    return parts.join();
   })();
   const tafContrastSummary =
     tafSignal.available && dateStr === detail.local_date
@@ -1245,19 +1062,13 @@ export function computeFrontTrendSignal(
           const isWarmingBias = score >= 18;
 
           if (tafSuppression === "low" && isCoolingBias) {
-            return isEnglish(locale)
-              ? "TAF is not adding a new cloud/rain suppression signal, but the near-surface window is already leaning cooler, so the current cooling bias still comes mainly from surface structure."
-              : "TAF 没有新增云雨压温利空，但当前峰值窗口里的近地面结构已经偏弱，所以这次偏降温判断仍主要来自近地面信号。";
+            return 'TAF is not adding a new cloud/rain suppression signal, but the near-surface window is already leaning cooler, so the current cooling bias still comes mainly from surface structure.';
           }
           if (tafSuppression === "low" && isWarmingBias) {
-            return isEnglish(locale)
-              ? "TAF is not adding a new cloud/rain cap, and the warmer bias still comes mainly from the surface window."
-              : "TAF 没有新增云雨压温约束，当前偏升温判断仍主要来自近地面窗口。";
+            return 'TAF is not adding a new cloud/rain cap, and the warmer bias still comes mainly from the surface window.';
           }
           if (tafSuppression === "medium" && isCoolingBias) {
-            return isEnglish(locale)
-              ? "TAF is not the only driver here; it only reinforces part of the cooling-side case, while the main tilt still comes from the surface window."
-              : "这次偏降温不只是 TAF 在起作用；TAF 只是加强了部分冷侧判断，主方向仍来自近地面窗口。";
+            return 'TAF is not the only driver here; it only reinforces part of the cooling-side case, while the main tilt still comes from the surface window.';
           }
           return "";
         })()
@@ -1269,153 +1080,105 @@ export function computeFrontTrendSignal(
     tafContrastSummary,
   ]
     .filter(Boolean)
-    .join(isEnglish(locale) ? " " : "");
+    .join();
   const surfaceSummaryLine = summary
-    ? isEnglish(locale)
-      ? `Surface: ${summary}`
-      : `近地面：${summary}`
+    ? `Surface: ${summary}`
     : "";
   const tafSummaryLine = tafSummaryLineBody
-    ? isEnglish(locale)
-      ? `Airport TAF: ${tafSummaryLineBody}`
-      : `机场 TAF：${tafSummaryLineBody}`
+    ? `Airport TAF: ${tafSummaryLineBody}`
     : "";
   const summaryLines = [surfaceSummaryLine, tafSummaryLine].filter(Boolean);
-  const combinedSummary = summaryLines.join(isEnglish(locale) ? " " : "");
+  const combinedSummary = summaryLines.join();
   const cloudNote = (() => {
     if (cloudDelta >= 15 && tempDelta >= 0.8 && dewDelta >= 0.8) {
-      return isEnglish(locale)
-        ? "Clouds are increasing while temperature and dew point still rise; this usually fits ongoing warm-moist transport rather than immediate cooling."
-        : "云量上升时温度和露点仍在抬升，更像暖湿输送持续中，而不是立刻转凉。";
+      return 'Clouds are increasing while temperature and dew point still rise; this usually fits ongoing warm-moist transport rather than immediate cooling.';
     }
     if (cloudDelta >= 15 && tempDelta >= 0 && lastBucket === "southerly") {
-      return isEnglish(locale)
-        ? "Clouds are building without clear cooling, and the low-level wind still leans southerly; watch for warm advection to continue."
-        : "云量增多但未明显降温，且低层风仍偏南，需继续关注暖平流是否延续。";
+      return 'Clouds are building without clear cooling, and the low-level wind still leans southerly; watch for warm advection to continue.';
     }
     if (cloudDelta >= 15 && tempDelta < 0 && precipMax >= 40) {
-      return isEnglish(locale)
-        ? "Clouds are thickening while temperature eases and precipitation risk is elevated; cloud/rain suppression is becoming more likely."
-        : "云量增厚且气温回落，同时降水概率偏高，更像云雨压温开始生效。";
+      return 'Clouds are thickening while temperature eases and precipitation risk is elevated; cloud/rain suppression is becoming more likely.';
     }
     if (cloudDelta >= 15 && tempDelta < 0 && pressureDelta >= 1) {
-      return isEnglish(locale)
-        ? "Clouds are increasing while temperature softens and pressure rebounds; watch for cold-air push or frontal suppression."
-        : "云量上升同时气温走弱、气压回升，需留意冷空气压入或锋面压温。";
+      return 'Clouds are increasing while temperature softens and pressure rebounds; watch for cold-air push or frontal suppression.';
     }
     if (cloudDelta <= -15 && tempDelta >= 0.8) {
-      return isEnglish(locale)
-        ? "Cloud cover is easing while temperature rises; daytime heating efficiency is improving."
-        : "云量回落且温度抬升，白天增温效率在改善。";
+      return 'Cloud cover is easing while temperature rises; daytime heating efficiency is improving.';
     }
-    return isEnglish(locale)
-      ? "Read forecast cloud-cover increase together with temperature, dew point, wind, and precipitation; it does not override the current observed sky condition."
-      : "这里显示的是预测窗口内的云量增幅，需要结合温度、露点、风向和降水一起看，不能覆盖当前实况的天空状况。";
+    return 'Read forecast cloud-cover increase together with temperature, dew point, wind, and precipitation; it does not override the current observed sky condition.';
   })();
   const dewNote = (() => {
     if (dewDelta >= 1.2 && tempDelta >= 0.8) {
-      return isEnglish(locale)
-        ? "Dew point and temperature rise together, which usually supports strengthening warm-moist transport."
-        : "露点和温度同步抬升，更偏向暖湿输送增强。";
+      return 'Dew point and temperature rise together, which usually supports strengthening warm-moist transport.';
     }
     if (dewDelta >= 1.2 && precipMax >= 40) {
-      return isEnglish(locale)
-        ? "Moisture is building while precipitation risk is already notable; watch for showers to cap daytime heating."
-        : "水汽在累积且降水风险已抬升，需关注阵雨对午后增温的压制。";
+      return 'Moisture is building while precipitation risk is already notable; watch for showers to cap daytime heating.';
     }
     if (dewDelta <= -1.2 && tempDelta <= 0) {
-      return isEnglish(locale)
-        ? "Drier low-level air is arriving together with softer temperature, which leans away from warm-moist support."
-        : "低层空气在转干且温度偏弱，暖湿支撑正在减弱。";
+      return 'Drier low-level air is arriving together with softer temperature, which leans away from warm-moist support.';
     }
-    return isEnglish(locale)
-      ? "Use dew-point change to judge whether low-level warm-moist transport is strengthening or fading."
-      : "露点变化主要用于判断低层暖湿输送是在增强还是减弱。";
+    return 'Use dew-point change to judge whether low-level warm-moist transport is strengthening or fading.';
   })();
   const pressureNote = (() => {
     if (pressureDelta >= 1.2 && tempDelta <= -0.8) {
-      return isEnglish(locale)
-        ? "Pressure rebound with cooling usually points to a cooler push or frontal suppression."
-        : "气压回升且温度走弱，更像冷空气压入或锋面压温。";
+      return 'Pressure rebound with cooling usually points to a cooler push or frontal suppression.';
     }
     if (pressureDelta <= -1.0 && tempDelta >= 0.8) {
-      return isEnglish(locale)
-        ? "Pressure is softening while temperature rises, a setup less hostile to warming."
-        : "气压走低同时温度抬升，对增温的压制相对减弱。";
+      return 'Pressure is softening while temperature rises, a setup less hostile to warming.';
     }
-    return isEnglish(locale)
-      ? "Pressure change is used as a supporting signal for cold-air push versus warming resilience."
-      : "气压变化更适合作为冷空气压入或增温韧性的辅助判断。";
+    return 'Pressure change is used as a supporting signal for cold-air push versus warming resilience.';
   })();
   const windNote = (() => {
     if (firstBucket !== lastBucket && lastBucket === "southerly") {
-      return isEnglish(locale)
-        ? "Wind turns toward a southerly regime, which is more favorable for warming."
-        : "风向转偏南，更有利于增温。";
+      return 'Wind turns toward a southerly regime, which is more favorable for warming.';
     }
     if (firstBucket !== lastBucket && lastBucket === "northerly") {
-      return isEnglish(locale)
-        ? "Wind turns toward a northerly regime, which is more favorable for cooling."
-        : "风向转偏北，更有利于降温。";
+      return 'Wind turns toward a northerly regime, which is more favorable for cooling.';
     }
     if (lastBucket === "southerly") {
-      return isEnglish(locale)
-        ? "Low-level flow remains southerly, so warm advection has not been disrupted."
-        : "低层风维持偏南，暖平流支撑尚未被破坏。";
+      return 'Low-level flow remains southerly, so warm advection has not been disrupted.';
     }
     if (lastBucket === "northerly") {
-      return isEnglish(locale)
-        ? "Low-level flow remains northerly, so cooling-side support is still present."
-        : "低层风维持偏北，降温侧支撑仍在。";
+      return 'Low-level flow remains northerly, so cooling-side support is still present.';
     }
-    return isEnglish(locale)
-      ? "Wind-direction change matters most when it crosses into southerly or northerly buckets."
-      : "风向变化最关键的是是否跨入偏南或偏北风桶。";
+    return 'Wind-direction change matters most when it crosses into southerly or northerly buckets.';
   })();
   const precipNote = (() => {
     if (precipMax >= 60) {
-      return isEnglish(locale)
-        ? `${precipWindowSummary} Cloud/rain suppression can materially change the peak outcome.`
-        : `${precipWindowSummary} 降水风险已高到足以显著改变峰值兑现结果，需要重点防压温。`;
+      return `${precipWindowSummary} Cloud/rain suppression can materially change the peak outcome.`;
     }
     if (precipMax >= 40) {
-      return isEnglish(locale)
-        ? `${precipWindowSummary} Watch whether cloud and showers interrupt daytime heating.`
-        : `${precipWindowSummary} 需要关注云系和阵雨是否打断白天增温。`;
+      return `${precipWindowSummary} Watch whether cloud and showers interrupt daytime heating.`;
     }
-    return isEnglish(locale)
-      ? "Precipitation risk remains limited and is used mainly as a suppression check."
-      : "降水风险暂时有限，主要作为压温风险校验项。";
+    return 'Precipitation risk remains limited and is used mainly as a suppression check.';
   })();
 
   const metrics = [
     {
-      label: isEnglish(locale) ? "Temperature delta" : "温度变化",
-      note: isEnglish(locale)
-        ? `Official Open-Meteo hourly data; window: ${windowText}`
-        : `官方 Open-Meteo 小时数据；计算窗口：${windowText}`,
+      label: 'Temperature delta',
+      note: `Official Open-Meteo hourly data; window: ${windowText}`,
       tone: tempDelta >= 0.8 ? "warm" : tempDelta <= -0.8 ? "cold" : "",
       value: formatDelta(tempDelta, detail.temp_symbol),
     },
     {
-      label: isEnglish(locale) ? "Dew point delta" : "露点变化",
+      label: 'Dew point delta',
       note: dewNote,
       tone: dewDelta >= 0.8 ? "warm" : dewDelta <= -0.8 ? "cold" : "",
       value: formatDelta(dewDelta, detail.temp_symbol),
     },
     {
-      label: isEnglish(locale) ? "Pressure delta" : "气压变化",
+      label: 'Pressure delta',
       note: pressureNote,
       tone: pressureDelta >= 1 ? "cold" : pressureDelta <= -1 ? "warm" : "",
       value: formatDelta(pressureDelta, " hPa"),
     },
     {
-      label: isEnglish(locale) ? "Wind-direction evolution" : "风向演变",
+      label: 'Wind-direction evolution',
       note: windNote,
       value: `${bucketLabel(firstBucket, locale)} -> ${bucketLabel(lastBucket, locale)}`,
     },
     {
-      label: isEnglish(locale) ? "Precip window" : "降水窗口",
+      label: 'Precip window',
       note: precipNote,
       tone: precipMax >= 50 ? "cold" : "",
       value: primaryPrecipWindow
@@ -1423,7 +1186,7 @@ export function computeFrontTrendSignal(
         : `${Math.round(precipMax)}%`,
     },
     {
-      label: isEnglish(locale) ? "Forecast cloud-cover delta" : "预测云量增幅",
+      label: 'Forecast cloud-cover delta',
       note: cloudNote,
       tone:
         cloudDelta >= 15 && tempDelta >= 0
@@ -1468,7 +1231,7 @@ export function computeFrontTrendSignal(
 export function getFutureModalView(
   detail: CityDetail,
   dateStr: string,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const forecastEntry =
     detail.forecast?.daily?.find((item) => item.date === dateStr) || null;
@@ -1503,7 +1266,7 @@ export function getFutureModalView(
 export function getShortTermNowcastLines(
   detail: CityDetail,
   dateStr: string,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const slice = getFutureSlice(detail, dateStr);
   if (dateStr !== detail.local_date) {
@@ -1514,12 +1277,10 @@ export function getShortTermNowcastLines(
     const target = afternoon.length ? afternoon : slice;
     if (!target.length) {
       return [
-        [isEnglish(locale) ? "Target date" : "目标日期", dateStr],
+        ['Target date', dateStr],
         [
-          isEnglish(locale) ? "Peak window" : "峰值窗口",
-          isEnglish(locale)
-            ? "No sufficient hourly forecast data for target-day peak-window diagnostics."
-            : "暂无足够的小时级 forecast 数据，无法生成目标日午后峰值窗口判断。",
+          'Peak window',
+          'No sufficient hourly forecast data for target-day peak-window diagnostics.',
         ],
       ] as const;
     }
@@ -1555,44 +1316,34 @@ export function getShortTermNowcastLines(
     const maxCloud = cloudValues.length ? Math.max(...cloudValues) : 0;
 
     return [
-      [isEnglish(locale) ? "Target date" : "目标日期", dateStr],
+      ['Target date', dateStr],
       [
-        isEnglish(locale) ? "Peak window" : "峰值窗口",
-        isEnglish(locale)
-          ? `${start.label} - ${end.label} (prefer 12:00-18:00)`
-          : `${start.label} - ${end.label}（优先取 12:00-18:00）`,
+        'Peak window',
+        `${start.label} - ${end.label} (prefer 12:00-18:00)`,
       ],
       [
-        isEnglish(locale) ? "Peak estimate" : "峰值预估",
+        'Peak estimate',
         `${Number.isFinite(Number(peakPoint.temp)) ? Number(peakPoint.temp).toFixed(1) : "--"}${detail.temp_symbol} @ ${peakPoint.label || "--"}`,
       ],
       [
-        isEnglish(locale) ? "Window temperature" : "窗口温度",
+        'Window temperature',
         `${Number.isFinite(startTemp) ? startTemp.toFixed(1) : "--"}${detail.temp_symbol} -> ${Number.isFinite(endTemp) ? endTemp.toFixed(1) : "--"}${detail.temp_symbol} (${formatDelta(endTemp - startTemp, detail.temp_symbol)})`,
       ],
       [
-        isEnglish(locale) ? "Dew-point delta" : "露点变化",
-        isEnglish(locale)
-          ? `${formatDelta(endDew - startDew, detail.temp_symbol)} for diagnosing warm/wet transport in afternoon.`
-          : `${formatDelta(endDew - startDew, detail.temp_symbol)}，用于判断午后暖湿输送是否增强。`,
+        'Dew-point delta',
+        `${formatDelta(endDew - startDew, detail.temp_symbol)} for diagnosing warm/wet transport in afternoon.`,
       ],
       [
-        isEnglish(locale) ? "Wind shift" : "风向演变",
-        isEnglish(locale)
-          ? `${bucketLabel(trendBucketFromDir(start.windDir), locale)} -> ${bucketLabel(trendBucketFromDir(end.windDir), locale)} around peak window.`
-          : `${bucketLabel(trendBucketFromDir(start.windDir), locale)} -> ${bucketLabel(trendBucketFromDir(end.windDir), locale)}，关注峰值前后是否转南风或回摆北风。`,
+        'Wind shift',
+        `${bucketLabel(trendBucketFromDir(start.windDir), locale)} -> ${bucketLabel(trendBucketFromDir(end.windDir), locale)} around peak window.`,
       ],
       [
-        isEnglish(locale) ? "Pressure delta" : "气压变化",
-        isEnglish(locale)
-          ? `${formatDelta(endPressure - startPressure, " hPa")} (higher pressure usually favors cold-air push).`
-          : `${formatDelta(endPressure - startPressure, " hPa")}，上升更偏向冷空气压入。`,
+        'Pressure delta',
+        `${formatDelta(endPressure - startPressure, " hPa")} (higher pressure usually favors cold-air push).`,
       ],
       [
-        isEnglish(locale) ? "Precip / cloud" : "降水 / 云量",
-        isEnglish(locale)
-          ? `${Math.round(maxPrecip)}% / ${Math.round(maxCloud)}% for cloud-suppression judgement around peak hours.`
-          : `${Math.round(maxPrecip)}% / ${Math.round(maxCloud)}%，用于判断峰值时段是否受云系压制。`,
+        'Precip / cloud',
+        `${Math.round(maxPrecip)}% / ${Math.round(maxCloud)}% for cloud-suppression judgement around peak hours.`,
       ],
     ] as const;
   }
@@ -1608,16 +1359,10 @@ export function getShortTermNowcastLines(
   const nearbySource = String(detail.nearby_source || "").toLowerCase();
   const sourceLabel =
     nearbySource === "mgm" || isTurkishMgmCity(detail)
-      ? isEnglish(locale)
-        ? "MGM nearby stations"
-        : "MGM 周边站"
+      ? 'MGM nearby stations'
       : nearbySource === "official_cluster"
-        ? isEnglish(locale)
-          ? "Official nearby stations"
-          : "官方周边站"
-      : isEnglish(locale)
-        ? "METAR nearby stations"
-        : "METAR 周边站";
+        ? 'Official nearby stations'
+      : 'METAR nearby stations';
   const currentTemp = Number(detail.current?.temp);
   const recentTemps = recent
     .map((point) => Number(point.temp))
@@ -1638,21 +1383,13 @@ export function getShortTermNowcastLines(
     const syncDelta = Number(station.time_delta_vs_anchor_minutes);
     const syncText =
       syncStatus === "synced"
-        ? isEnglish(locale)
-          ? "time-synced"
-          : "时间同步"
+        ? 'time-synced'
         : syncStatus === "near_realtime" || syncStatus === "lagged"
           ? Number.isFinite(syncDelta)
-            ? isEnglish(locale)
-              ? `${Math.round(syncDelta)} min offset`
-              : `时间差 ${Math.round(syncDelta)} 分钟`
-            : isEnglish(locale)
-              ? "not fully synchronized"
-              : "非完全同步"
+            ? `${Math.round(syncDelta)} min offset`
+            : 'not fully synchronized'
           : syncStatus === "unknown"
-            ? isEnglish(locale)
-              ? "timing unverified"
-              : "时间待校验"
+            ? 'timing unverified'
             : "";
     if (!nearbyLead || Math.abs(diff) > Math.abs(nearbyLead.diff)) {
       nearbyLead = {
@@ -1660,7 +1397,7 @@ export function getShortTermNowcastLines(
         name:
           station.name ||
           station.icao ||
-          (isEnglish(locale) ? "Nearby station" : "周边站"),
+          ('Nearby station'),
         temp,
         syncText,
       };
@@ -1670,44 +1407,32 @@ export function getShortTermNowcastLines(
 
   const rows: Array<readonly [string, string]> = [
     [
-      isEnglish(locale) ? "Primary station" : "当前主站",
+      'Primary station',
       `${detail.current?.temp ?? "--"}${detail.temp_symbol} @ ${detail.current?.obs_time || "--"}`,
     ],
     [
-      isEnglish(locale) ? "Raw METAR" : "原始 METAR",
-      detail.current?.raw_metar || (isEnglish(locale) ? "N/A" : "暂无"),
+      'Raw METAR',
+      detail.current?.raw_metar || ('N/A'),
     ],
     [
-      isEnglish(locale) ? "Next 0-2h" : "近 0-2 小时",
-      isEnglish(locale)
-        ? `${formatDelta(shortDelta, detail.temp_symbol)} based on latest METAR sequence short-term momentum.`
-        : `${formatDelta(shortDelta, detail.temp_symbol)}，依据最近 METAR 序列判断短时动量。`,
+      'Next 0-2h',
+      `${formatDelta(shortDelta, detail.temp_symbol)} based on latest METAR sequence short-term momentum.`,
     ],
     [
       sourceLabel,
-      isEnglish(locale)
-        ? `${usableNearbyCount}/${nearby.length} stations usable for the nearby scan; station timestamps may differ.`
-        : `${usableNearbyCount}/${nearby.length} 个站点可参与邻近监控；周边站观测时间可能不同步。`,
+      `${usableNearbyCount}/${nearby.length} stations usable for the nearby scan; station timestamps may differ.`,
     ],
   ];
 
   if (nearbyLead) {
-    const tone = isEnglish(locale)
-      ? nearbyLead.diff > 0
+    const tone = nearbyLead.diff > 0
         ? "warmer"
         : nearbyLead.diff < 0
           ? "cooler"
-          : "flat"
-      : nearbyLead.diff > 0
-        ? "偏暖"
-        : nearbyLead.diff < 0
-          ? "偏冷"
-          : "持平";
+          : "flat";
     rows.push([
-      isEnglish(locale) ? "Leading station" : "领先站",
-      isEnglish(locale)
-        ? `${nearbyLead.name} ${nearbyLead.temp}${detail.temp_symbol}, relative to primary station ${formatDelta(nearbyLead.diff, detail.temp_symbol)} (${tone})${nearbyLead.syncText ? `; ${nearbyLead.syncText}` : ""}.`
-        : `${nearbyLead.name} ${nearbyLead.temp}${detail.temp_symbol}，相对主站 ${formatDelta(nearbyLead.diff, detail.temp_symbol)}（${tone}）${nearbyLead.syncText ? `；${nearbyLead.syncText}` : ""}。`,
+      'Leading station',
+      `${nearbyLead.name} ${nearbyLead.temp}${detail.temp_symbol}, relative to primary station ${formatDelta(nearbyLead.diff, detail.temp_symbol)} (${tone})${nearbyLead.syncText ? `; ${nearbyLead.syncText}` : ""}.`,
     ]);
   }
 
@@ -1753,7 +1478,7 @@ function formatObservationUpdate(value: unknown, locale: Locale) {
   if (looksDated) {
     const parsed = new Date(raw);
     if (!Number.isNaN(parsed.getTime())) {
-      return new Intl.DateTimeFormat(isEnglish(locale) ? "en-US" : "zh-CN", {
+      return new Intl.DateTimeFormat("en-US", {
         day: "2-digit",
         hour: "2-digit",
         hour12: false,
@@ -1832,7 +1557,7 @@ function getObservedTemperatureProfile(detail: CityDetail, locale: Locale) {
   );
 
   if (!selected) {
-    return isEnglish(locale) ? "Unavailable" : "未提供";
+    return 'Unavailable';
   }
 
   const observedTemp = Number(selected.temp);
@@ -1877,11 +1602,11 @@ function getObservationUpdateProfile(detail: CityDetail, locale: Locale) {
 
   return (
     formatObservationUpdate(rawValue, locale) ||
-    (isEnglish(locale) ? "Unavailable" : "未提供")
+    ('Unavailable')
   );
 }
 
-export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN") {
+export function getCityProfileStats(detail: CityDetail, locale: Locale = "en-US") {
   const risk = detail.risk || {};
   const nearbyCount = Array.isArray(detail.mgm_nearby) ? detail.mgm_nearby.length : 0;
   const nearbySource = String(detail.nearby_source || "").trim().toLowerCase();
@@ -1893,21 +1618,15 @@ export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN"
 
   const sourceDisplay = (() => {
     if (sourceCode === "hko") {
-      return isEnglish(locale)
-        ? "Hong Kong Observatory (HKO)"
-        : "香港天文台 (HKO)";
+      return 'Hong Kong Observatory (HKO)';
     }
     if (sourceCode === "cwa") {
-      return isEnglish(locale)
-        ? "Central Weather Administration (CWA)"
-        : "交通部中央气象署 (CWA)";
+      return 'Central Weather Administration (CWA)';
     }
     if (sourceCode === "noaa") {
       const noaaCode = getNoaaStationCode(detail);
       const noaaName = getNoaaStationName(detail);
-      return isEnglish(locale)
-        ? `${noaaName}${noaaCode ? ` (${noaaCode})` : ""}`
-        : `${noaaName}${noaaCode ? `（${noaaCode}）` : ""}`;
+      return `${noaaName}${noaaCode ? ` (${noaaCode})` : ""}`;
     }
     if (sourceCode === "wunderground") {
       const icao = String(detail.risk?.icao || detail.current?.station_code || "")
@@ -1933,73 +1652,53 @@ export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN"
     }
     if (risk.airport && risk.icao) return `${risk.airport} (${risk.icao})`;
     if (risk.airport) return String(risk.airport);
-    return isEnglish(locale) ? "No profile" : "暂无档案";
+    return 'No profile';
   })();
 
   const rows = [
     {
       label: isOfficialSource
-        ? isEnglish(locale)
-          ? "Settlement station"
-          : "结算站点"
-        : isEnglish(locale)
-          ? "Settlement airport"
-          : "结算机场",
+        ? 'Settlement station'
+        : 'Settlement airport',
       value: sourceDisplay,
     },
     {
       label: isOfficialSource
-        ? isEnglish(locale)
-          ? "Reference distance"
-          : "参考距离"
-        : isEnglish(locale)
-          ? "Station distance"
-          : "站点距离",
+        ? 'Reference distance'
+        : 'Station distance',
       value:
         risk.distance_km != null && Number.isFinite(Number(risk.distance_km))
           ? `${risk.distance_km} km`
-          : isEnglish(locale)
-            ? "Not marked"
-            : "未标注",
+          : 'Not marked',
     },
     {
-      label: isEnglish(locale) ? "Observed temp" : "实测温度",
+      label: 'Observed temp',
       value: getObservedTemperatureProfile(detail, locale),
     },
     {
-      label: isEnglish(locale) ? "Observation update" : "观测更新",
+      label: 'Observation update',
       value: getObservationUpdateProfile(detail, locale),
     },
     {
-      label: isEnglish(locale) ? "Nearby stations" : "周边站点",
+      label: 'Nearby stations',
       value:
         nearbyCount > 0
-          ? isEnglish(locale)
-            ? `${nearbyCount} participating stations`
-            : `${nearbyCount} 个参与监控`
-          : isEnglish(locale)
-            ? "No nearby stations"
-            : "暂无周边站",
+          ? `${nearbyCount} participating stations`
+          : 'No nearby stations',
     },
   ];
 
   if (nearbyCount > 0) {
     rows.push({
-      label: isEnglish(locale) ? "Nearby source" : "周边站来源",
+      label: 'Nearby source',
       value:
         nearbySource === "kma"
-          ? isEnglish(locale)
-            ? "KMA official stations"
-            : "KMA 官方站"
+          ? 'KMA official stations'
           : nearbySource === "official_cluster"
-            ? isEnglish(locale)
-              ? "Official station cluster"
-              : "官方站簇"
+            ? 'Official station cluster'
             : nearbySource === "mgm"
               ? "MGM"
-              : isEnglish(locale)
-                ? "Airport / METAR network"
-                : "机场 / METAR 网络",
+              : 'Airport / METAR network',
     });
   }
 
@@ -2011,10 +1710,10 @@ export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN"
           detail.risk?.airport ||
           "",
       ).trim() ||
-      (isEnglish(locale) ? "Airport station" : "机场主站");
+      ('Airport station');
     const airportObsTime =
       String(detail.airport_current.obs_time || "").trim() ||
-      (isEnglish(locale) ? "pending" : "待更新");
+      ('pending');
     const airportHigh =
       detail.airport_current.max_so_far != null
         ? `${detail.airport_current.max_so_far}${detail.temp_symbol || ""}${
@@ -2022,18 +1721,16 @@ export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN"
               ? ` @ ${detail.airport_current.max_temp_time}`
               : ""
           }`
-        : isEnglish(locale)
-          ? "Unavailable"
-          : "未提供";
+        : 'Unavailable';
 
     rows.push({
-      label: isEnglish(locale) ? "Airport reference" : "机场主站参考",
+      label: 'Airport reference',
       value: `${airportLabel}: ${detail.airport_current.temp}${
         detail.temp_symbol || ""
       } @ ${airportObsTime}`,
     });
     rows.push({
-      label: isEnglish(locale) ? "Airport high" : "机场目前最高温",
+      label: 'Airport high',
       value: airportHigh,
     });
   }
@@ -2043,7 +1740,7 @@ export function getCityProfileStats(detail: CityDetail, locale: Locale = "zh-CN"
 
 export function getSettlementRiskNarrative(
   detail: CityDetail,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
   const risk = detail.risk || {};
   const sourceCode = getObservationSourceCode(detail);
@@ -2051,64 +1748,46 @@ export function getSettlementRiskNarrative(
     sourceCode === "hko" ||
     sourceCode === "cwa" ||
     sourceCode === "noaa"
-    ? isEnglish(locale)
-      ? "settlement reference station"
-      : "结算参考站"
-    : isEnglish(locale)
-      ? "settlement airport"
-      : "结算机场";
+    ? 'settlement reference station'
+    : 'settlement airport';
   const lines: string[] = [];
 
   if (risk.warning) {
     lines.push(
-      isEnglish(locale)
-        ? `Current key risk: ${risk.warning}`
-        : `当前主要风险是：${risk.warning}`,
+      `Current key risk: ${risk.warning}`,
     );
   }
 
   if (risk.distance_km != null) {
     if (risk.distance_km >= 60) {
       lines.push(
-        isEnglish(locale)
-          ? `The ${stationTerm} is far from urban core; market feel and settlement value may diverge significantly.`
-          : `${stationTerm}与城市核心区域距离偏大，盘面温度与结算值可能出现明显背离。`,
+        `The ${stationTerm} is far from urban core; market feel and settlement value may diverge significantly.`,
       );
     } else if (risk.distance_km >= 25) {
       lines.push(
-        isEnglish(locale)
-          ? `The ${stationTerm} has material distance from downtown; peak/overnight rhythm should prioritize the settlement station.`
-          : `${stationTerm}与城区存在可感知距离，午后峰值和夜间降温节奏需要优先看结算站。`,
+        `The ${stationTerm} has material distance from downtown; peak/overnight rhythm should prioritize the settlement station.`,
       );
     } else {
       lines.push(
-        isEnglish(locale)
-          ? `The ${stationTerm} is close enough; city feel and settlement temperature are usually more synchronized.`
-          : `${stationTerm}距离较近，城市体感与结算温度通常更同步。`,
+        `The ${stationTerm} is close enough; city feel and settlement temperature are usually more synchronized.`,
       );
     }
   }
 
   if (isTurkishMgmCity(detail)) {
     lines.push(
-      isEnglish(locale)
-        ? "For Turkish MGM-supported cities, focus on the airport station plus MGM nearby-station linkage, not urban sensation alone."
-        : "对接入 MGM 的土耳其城市，需要重点看机场站与 MGM 周边站联动，不能只看城区体感。",
+      'For Turkish MGM-supported cities, focus on the airport station plus MGM nearby-station linkage, not urban sensation alone.',
     );
   }
 
   if (detail.current?.obs_age_min != null) {
     if (detail.current.obs_age_min >= 45) {
       lines.push(
-        isEnglish(locale)
-          ? `Current METAR is ${detail.current.obs_age_min} minutes old. Blend nearby stations for nowcast instead of single-station snapshot.`
-          : `当前 METAR 已有 ${detail.current.obs_age_min} 分钟时滞，临近判断要结合周边站而不是只看主站快照。`,
+        `Current METAR is ${detail.current.obs_age_min} minutes old. Blend nearby stations for nowcast instead of single-station snapshot.`,
       );
     } else {
       lines.push(
-        isEnglish(locale)
-          ? "Primary station observation is fresh enough; short-term judgement can anchor on it."
-          : "当前主站观测较新，短时判断可以把主站温度作为主要锚点。",
+        'Primary station observation is fresh enough; short-term judgement can anchor on it.',
       );
     }
   }
@@ -2116,7 +1795,7 @@ export function getSettlementRiskNarrative(
   return lines;
 }
 
-export function getClimateDrivers(detail: CityDetail, locale: Locale = "zh-CN") {
+export function getClimateDrivers(detail: CityDetail, locale: Locale = "en-US") {
   const drivers: Array<{ label: string; text: string }> = [];
   const lat = Math.abs(Number(detail.lat));
   const nearbyCount = Array.isArray(detail.mgm_nearby)
@@ -2126,63 +1805,47 @@ export function getClimateDrivers(detail: CityDetail, locale: Locale = "zh-CN") 
 
   if (lat >= 50) {
     drivers.push({
-      label: isEnglish(locale) ? "High-latitude cold air" : "高纬冷空气",
-      text: isEnglish(locale)
-        ? "At higher latitude, temperature rhythm is more affected by cold-air surges, trough passage, and seasonal radiation angle."
-        : "该城市位于较高纬度，温度变化更容易受到冷空气南下、短波槽和日照角度变化影响。",
+      label: 'High-latitude cold air',
+      text: 'At higher latitude, temperature rhythm is more affected by cold-air surges, trough passage, and seasonal radiation angle.',
     });
   } else if (lat >= 35) {
     drivers.push({
-      label: isEnglish(locale) ? "Mid-latitude westerlies" : "中纬西风带",
-      text: isEnglish(locale)
-        ? "Temperature shifts are often controlled by frontal transitions rather than pure daytime radiation."
-        : "该城市主要受中纬西风带和锋面活动控制，升降温常来自气团切换，而不是单一日照变化。",
+      label: 'Mid-latitude westerlies',
+      text: 'Temperature shifts are often controlled by frontal transitions rather than pure daytime radiation.',
     });
   } else if (lat >= 20) {
     drivers.push({
-      label: isEnglish(locale) ? "Subtropical highs" : "副热带高压",
-      text: isEnglish(locale)
-        ? "Subtropical ridge, clear-sky radiation and low-level warm advection often dominate warming efficiency."
-        : "该城市更容易受副热带高压、晴空辐射和低层暖平流影响，午后增温能力通常更强。",
+      label: 'Subtropical highs',
+      text: 'Subtropical ridge, clear-sky radiation and low-level warm advection often dominate warming efficiency.',
     });
   } else {
     drivers.push({
-      label: isEnglish(locale) ? "Tropical moisture & convection" : "热带水汽与对流",
-      text: isEnglish(locale)
-        ? "Temperature and feels-like are often modulated by moisture transport, cloud convection and showers."
-        : "该城市偏热带环境，温度与体感常受水汽输送、云对流和阵雨触发影响。",
+      label: 'Tropical moisture & convection',
+      text: 'Temperature and feels-like are often modulated by moisture transport, cloud convection and showers.',
     });
   }
 
   drivers.push({
-    label: isEnglish(locale) ? "Dry-wet boundary layer" : "干湿边界层",
-    text: isEnglish(locale)
-      ? "Boundary-layer humidity controls daytime warming efficiency; dry boundary warms faster, wet boundary is more cloud/precip-sensitive."
-      : "低层干湿状态会决定午后升温效率。干空气通常升温更快，湿空气更容易受云量和降水过程抑制。",
+    label: 'Dry-wet boundary layer',
+    text: 'Boundary-layer humidity controls daytime warming efficiency; dry boundary warms faster, wet boundary is more cloud/precip-sensitive.',
   });
 
   drivers.push({
-    label: isEnglish(locale) ? "Advection transport" : "平流输送",
-    text: isEnglish(locale)
-      ? "Short-term trend is usually driven by low-level air-mass transport. Persistent wind origin tends to sustain thermal direction."
-      : "短时趋势常由低层气团输送控制。若风向持续来自同一侧，温度通常更容易沿该方向延续。",
+    label: 'Advection transport',
+    text: 'Short-term trend is usually driven by low-level air-mass transport. Persistent wind origin tends to sustain thermal direction.',
   });
 
   if (Number.isFinite(distanceKm) && distanceKm >= 25) {
     drivers.push({
-      label: isEnglish(locale) ? "Station representativeness" : "站点代表性",
-      text: isEnglish(locale)
-        ? "When settlement station is not near city core, perceived temperature and settlement value may diverge."
-        : "结算站与城市核心区存在一定距离时，体感温度和结算温度可能分离，评估时应优先以结算站观测为准。",
+      label: 'Station representativeness',
+      text: 'When settlement station is not near city core, perceived temperature and settlement value may diverge.',
     });
   }
 
   if (nearbyCount >= 4) {
     drivers.push({
-      label: isEnglish(locale) ? "Local heterogeneity" : "局地差异",
-      text: isEnglish(locale)
-        ? "More nearby stations suggest terrain/urban-heat heterogeneity; settlement station and downtown sensation should be evaluated separately."
-        : "周边可用站点较多，说明地形、城区热岛或下垫面差异可能明显，结算站与城区体感需要分开评估。",
+      label: 'Local heterogeneity',
+      text: 'More nearby stations suggest terrain/urban-heat heterogeneity; settlement station and downtown sensation should be evaluated separately.',
     });
   }
 

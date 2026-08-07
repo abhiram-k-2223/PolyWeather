@@ -61,7 +61,7 @@ export function runTests() {
   );
   assert(
     dashboardSource.includes("mobileChartRow") &&
-      dashboardSource.includes("建议横屏") &&
+      dashboardSource.includes("Landscape recommended") &&
       dashboardSource.includes("Rotate to landscape") &&
       dashboardSource.includes("disableClose={true}"),
     "mobile terminal should render one selected chart and suggest landscape for the full grid",
@@ -94,9 +94,9 @@ export function runTests() {
     "grid selector must expose at most a 3 by 2 chart layout",
   );
   assert(
-    usageGuideSource.includes("1x1 到 3x2") &&
+    usageGuideSource.includes("1x1 to 3x2") &&
       usageGuideSource.includes("1x1 to 3x2") &&
-      !usageGuideSource.includes("1x1 到 3x3") &&
+      !usageGuideSource.includes("1x1 to 3x3") &&
       !usageGuideSource.includes("1x1 to 3x3"),
     "terminal guide must describe the new 3x2 maximum layout instead of 3x3",
   );
@@ -151,23 +151,6 @@ export function runTests() {
       chartCanvasSource.includes('compact ? "min-h-[120px]" : "min-h-[220px]"'),
     "compact grid charts must not force desktop minimum heights that get clipped inside dense terminal slots",
   );
-  const signedOutBlock = dashboardSource.slice(
-    dashboardSource.indexOf('if (event === "SIGNED_OUT")'),
-    dashboardSource.indexOf('} else if (event === "TOKEN_REFRESHED"'),
-  );
-  assert(
-    signedOutBlock.includes("await supabase.auth.getSession()") &&
-      signedOutBlock.includes("mergeAccessStateWithAuthPayload(prev, payload)") &&
-      signedOutBlock.indexOf("await supabase.auth.getSession()") <
-        signedOutBlock.indexOf("setProAccess(createEmptyAccess(false))"),
-    "terminal auth listener must re-check the current Supabase session before clearing access on SIGNED_OUT events",
-  );
-  assert(
-    dashboardSource.includes('event === "INITIAL_SESSION"') &&
-      dashboardSource.indexOf('event === "INITIAL_SESSION"') <
-        dashboardSource.indexOf('event === "TOKEN_REFRESHED"'),
-    "terminal auth listener must hydrate access from Supabase INITIAL_SESSION events during first navigation from the landing page",
-  );
   assert(
     dashboardSource.includes("useDeferredValue") &&
       dashboardSource.includes("deferredSearchQuery") &&
@@ -185,13 +168,6 @@ export function runTests() {
       citySelectorSource.includes("deferredSearchQuery") &&
       citySelectorSource.includes("[rows, deferredSearchQuery, activeTab]"),
     "city selector search must defer expensive dropdown filtering so top-row selection stays responsive",
-  );
-  assert(
-    dashboardSource.includes("accessDecisionPending") &&
-      dashboardSource.includes("shouldShowPaywall") &&
-      dashboardSource.indexOf("if (accessDecisionPending)") <
-        dashboardSource.indexOf("if (shouldShowPaywall)"),
-    "terminal must keep showing verification while access is undecided instead of flashing the paywall",
   );
   assert(
     dashboardSource.includes('trackAppEvent("enter_terminal"') &&

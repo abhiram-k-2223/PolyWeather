@@ -26,11 +26,11 @@ const STATIC_UPDATE_ANNOUNCEMENTS: StaticUpdateAnnouncement[] = [
     publishedAt: "2026-06-07T00:00:00+08:00",
     expiresAt: "2026-07-15T00:00:00+08:00",
     zh: {
-      title: "更新公告：终端新增公告与反馈状态",
+      title: "Update: announcements and feedback status are now live",
       body:
-        "PolyWeather 天气决策台新增“更新公告”入口，后续产品更新、数据源调整和重要说明会在这里同步。\n\n" +
-        "用户反馈系统也已升级：提交反馈时会自动附带相关图表上下文，用户可以在终端右上角通知入口和账户页查看自己反馈的处理状态，包括已收到、已确认、处理中、已解决和已关闭。\n\n" +
-        "我们也在考虑对真实、可复现、有建设性价值的反馈加入积分或 Pro 天数激励。",
+        "PolyWeather Terminal now has an update announcement entry. Future product updates, data-source changes, and important notes will be shared here.\n\n" +
+        "The feedback system has also been upgraded. When users submit feedback, PolyWeather automatically attaches the relevant chart context. Users can now track their own feedback status from the terminal notification entry and the account page: received, confirmed, in progress, resolved, or closed.\n\n" +
+        "We are also considering small rewards such as points or Pro days for real, reproducible, and constructive feedback.",
     },
     en: {
       title: "Update: announcements and feedback status are now live",
@@ -50,11 +50,10 @@ function isActiveAnnouncement(item: StaticUpdateAnnouncement, now = Date.now()) 
 }
 
 function pickAnnouncementText(payload: StaticUpdateAnnouncement, isEn: boolean) {
-  const primary = isEn ? payload.en : payload.zh;
-  const fallback = isEn ? payload.zh : payload.en;
+  const primary = payload.en;
   return {
-    title: String(primary?.title || fallback?.title || "").trim(),
-    body: String(primary?.body || fallback?.body || "").trim(),
+    title: String(primary?.title || "").trim(),
+    body: String(primary?.body || "").trim(),
   };
 }
 
@@ -107,11 +106,11 @@ export function UpdateAnnouncementButton({ isEn }: UpdateAnnouncementButtonProps
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="inline-flex h-7 items-center gap-1.5 rounded border border-blue-200 bg-blue-50 px-2 text-[10px] font-bold uppercase tracking-wide text-blue-700 transition-colors hover:border-blue-300 hover:bg-blue-100"
-        title={isEn ? "Update announcement" : "更新公告"}
+        title={isEn ? "Update announcement" : "Update announcement"}
         aria-expanded={open}
       >
         <Megaphone size={12} />
-        {isEn ? "Updates" : "更新公告"}
+        {isEn ? "Updates" : "Updates"}
       </button>
       {open && (
         <div className="absolute left-0 top-8 z-50 w-[min(360px,calc(100vw-32px))] rounded-md border border-slate-200 bg-white p-3 text-left shadow-lg">
@@ -121,11 +120,11 @@ export function UpdateAnnouncementButton({ isEn }: UpdateAnnouncementButtonProps
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold leading-5 text-slate-900">
-                {text.title || (isEn ? "PolyWeather update" : "PolyWeather 更新")}
+                {text.title || (isEn ? "PolyWeather update" : "PolyWeather update")}
               </div>
               {updatedAt && (
                 <div className="mt-0.5 font-mono text-[10px] text-slate-400">
-                  {isEn ? "Updated" : "更新"} {updatedAt}
+                  {isEn ? "Updated" : "Updated"} {updatedAt}
                 </div>
               )}
             </div>
@@ -133,7 +132,7 @@ export function UpdateAnnouncementButton({ isEn }: UpdateAnnouncementButtonProps
               type="button"
               onClick={() => setOpen(false)}
               className="grid h-6 w-6 shrink-0 place-items-center rounded border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-              title={isEn ? "Close" : "关闭"}
+              title={isEn ? "Close" : "Close"}
             >
               <X size={12} />
             </button>

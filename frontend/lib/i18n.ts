@@ -1,191 +1,11 @@
-export type Locale = "zh-CN" | "en-US";
+export type Locale = "en-US";
 
 type MessageParams = Record<string, string | number>;
 
-const DEFAULT_LOCALE: Locale = "zh-CN";
+const DEFAULT_LOCALE: Locale = "en-US";
 export const LOCALE_STORAGE_KEY = "polyweather.locale";
 
 const MESSAGES: Record<Locale, Record<string, string>> = {
-  "zh-CN": {
-    "header.subtitle": "天气衍生品智能分析",
-    "header.home": "主页",
-    "header.homeAria": "返回主地图主页",
-    "header.docs": "文档",
-    "header.docsAria": "打开产品文档中心",
-    "header.info": "技术说明",
-    "header.infoAria": "查看系统技术说明",
-    "header.account": "账户",
-    "header.accountAria": "打开账户页",
-    "header.signIn": "登录 / 注册",
-    "header.signInAria": "打开登录注册页",
-    "header.live": "实时",
-    "header.refreshAria": "刷新所有数据",
-    "header.langAria": "切换语言",
-    "header.langZh": "中文",
-    "header.langEn": "EN",
-
-    "sidebar.title": "监控城市",
-    "sidebar.currentTemp": "当前 {temp}",
-    "sidebar.peakTempAt": "峰值 {temp} @ {time}",
-    "sidebar.peakAt": "峰值 @ {time}",
-    "sidebar.group.high": "近期强势",
-    "sidebar.group.medium": "近期一般",
-    "sidebar.group.low": "近期偏弱",
-    "sidebar.group.other": "样本不足",
-
-    "dashboard.loading": "正在同步站点观测与结算站点信息，请稍候...",
-    "dashboard.opportunityTitle": "可交易机会",
-    "dashboard.opportunitySubtitle":
-      "基于当前时间、实况数据和模型预测，筛选出最具交易价值的市场",
-    "dashboard.opportunityList": "机会列表",
-    "dashboard.distributionView": "分布视图",
-    "dashboard.calendarView": "日历视图",
-
-    "detail.closeAria": "关闭城市详情面板",
-    "detail.waitSelect": "等待选择城市",
-    "detail.todayAnalysis": "今日日内分析",
-    "detail.loading": "正在加载城市详情...",
-    "detail.emptyHint": "从左侧城市列表选择一个城市查看详情。",
-    "detail.sceneryAlt": "{city} 风景照",
-    "detail.sceneryTitle": "城市风景与微气候",
-    "detail.sceneryFallback":
-      "当前没有匹配到风景图，可从下方城市档案查看站点与观测结构。",
-    "detail.profile": "城市档案",
-    "detail.todayMiniTrend": "今日日内走势（简版）",
-    "detail.chartLegendEmpty": "暂无小时级实测或预测曲线。",
-    "detail.currentTemp": "当前温度",
-    "detail.todayHigh": "今日最高",
-    "detail.targetTemp": "目标温度",
-    "detail.gap": "距目标差距",
-    "detail.peakWindow": "预计峰值",
-    "detail.compositeScore": "综合得分",
-    "detail.selectCity": "← 点击左侧行查看详情",
-    "detail.localTime": "当前时间",
-
-    "forecast.title": "多日预报",
-    "forecast.empty": "暂无多日预报",
-    "forecast.today": "今天",
-
-    "guide.title": "📎 PolyWeather 系统技术说明",
-    "guide.closeAria": "关闭技术说明",
-    "guide.footer":
-      "数据源以 METAR、香港天文台(HKO)、NOAA 指定站点、Turkish MGM、Open-Meteo、weather.gov 为主。",
-
-
-    "future.todayTitle": "{city} · 今日日内分析",
-    "future.dateTitle": "{city} · {date} 未来日期分析",
-    "future.closeTodayAria": "关闭今日日内分析",
-    "future.closeDateAria": "关闭未来日期分析",
-    "future.currentObs": "当前实测",
-    "future.currentWeather": "当前天气",
-    "future.wuRef": "结算参考",
-    "future.sunrise": "日出时间",
-    "future.sunset": "日落时间",
-    "future.sunshine": "日照时长",
-    "future.todayForecastHigh": "今日预报高温",
-    "future.targetForecast": "目标日预报",
-    "future.deb": "DEB 预测",
-    "future.mu": "动态分布中心",
-    "future.score": "趋势评分",
-    "future.todayTempTrend": "今日温度走势",
-    "future.targetTempTrend": "目标日小时走势",
-    "future.probability": "模型概率参考",
-    "future.models": "多模型预报",
-    "future.structureToday": "今日日内结构信号",
-    "future.structureDate": "未来 6-48 小时趋势",
-    "future.judgement": "判断",
-    "future.confidence": "置信度",
-    "future.maxPrecip": "最大降水概率",
-    "future.ai": "结构化实况",
-    "future.noAi": "暂无结构化实况，当前以模型数据为主。",
-    "future.weatherGov": "weather.gov 文本",
-    "future.risk": "结算与偏差风险",
-    "future.climate": "当地气候主要受什么影响",
-    "future.chartLegendEmpty": "暂无小时级实测数据",
-
-    "confidence.high": "高",
-    "confidence.medium": "中",
-    "confidence.low": "低",
-
-    "section.todayTempTrend": "今日温度走势",
-    "section.chartEmpty": "暂无小时级数据",
-    "section.probability": "校准模型概率",
-    "section.mu": "动态分布中心 μ = {value}{unit}",
-    "section.noProb": "暂无概率数据",
-    "section.models": "多模型预报",
-    "section.noModels": "暂无多模型预报",
-    "section.ai": "结构化实况",
-    "section.aiEmpty": "暂无结构化实况，当前以模型数据为主。",
-    "section.risk": "数据偏差风险",
-    "section.noRiskProfile": "暂无风险档案",
-    "section.airport": "机场",
-    "section.distance": "距离",
-    "section.note": "注意",
-    "section.currentConditions": "当前概况",
-    "section.tradeRecommendation": "推荐交易",
-
-    "filter.mode": "扫描模式",
-    "filter.tradable": "可交易机会",
-    "filter.early": "早期机会",
-    "filter.touch": "触达博弈",
-    "filter.trend": "趋势确认",
-    "filter.conditions": "匹配条件",
-    "filter.priceRange": "价格区间",
-    "filter.edgeRange": "最小边际优势",
-    "filter.onlyTradable": "只允许可交易",
-    "filter.liquidity": "流动性级别",
-    "filter.liquidityHigh": "最高流动性",
-    "filter.timeRange": "时间周期",
-    "filter.scanCta": "开始扫描",
-
-    "account.title": "账户中心",
-    "account.subtitle": "查看身份、权限与 Bot 绑定信息",
-    "account.backDashboard": "返回看板",
-    "account.refresh": "刷新",
-    "account.signIn": "登录 / 注册",
-    "account.signOut": "退出登录",
-    "account.loading": "正在同步账户信息...",
-    "account.error": "加载失败: {message}",
-    "account.updatedAt": "最近同步: {time}",
-    "account.guestName": "PolyWeather 用户",
-    "account.authenticated": "已登录",
-    "account.guest": "游客模式",
-    "account.subscriptionActive": "订阅有效",
-    "account.subscriptionRequired": "需要订阅",
-    "account.subscriptionUnknown": "订阅状态未知",
-    "account.card.membership": "会员与权限",
-    "account.card.identity": "身份信息",
-    "account.card.backend": "后端鉴权",
-    "account.card.bot": "Bot 绑定",
-    "account.field.email": "邮箱",
-    "account.field.userId": "用户 ID",
-    "account.field.provider": "登录方式",
-    "account.field.lastSignIn": "最近登录",
-    "account.field.mode": "鉴权模式",
-    "account.field.backendStatus": "后端状态",
-    "account.field.subscription": "订阅结果",
-    "account.field.requirement": "订阅要求",
-    "account.field.bindCommand": "绑定命令",
-    "account.field.bindHint":
-      "将下面命令发送到 Telegram Bot，可把网页账户与机器人权限绑定。",
-    "account.mode.supabaseRequired": "Supabase 强制登录",
-    "account.mode.supabaseOptional": "Supabase 可选登录",
-    "account.mode.supabase": "Supabase 会话鉴权",
-    "account.mode.legacy": "Legacy Token 鉴权",
-    "account.mode.disabled": "未启用权限校验",
-    "account.mode.unknown": "未知模式",
-    "account.backend.ok": "通过",
-    "account.backend.fail": "失败",
-    "account.subscription.active": "有效",
-    "account.subscription.inactive": "无效/已过期",
-    "account.subscription.notRequired": "当前未强制订阅",
-    "account.subscription.unknown": "未知",
-    "account.copy": "复制",
-    "account.copied": "已复制",
-    "account.na": "--",
-
-    "common.na": "--",
-  },
   "en-US": {
     "header.subtitle": "Weather Derivatives Intelligence",
     "header.home": "Home",
@@ -201,7 +21,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     "header.live": "LIVE",
     "header.refreshAria": "Refresh all data",
     "header.langAria": "Switch language",
-    "header.langZh": "中文",
+    "header.langZh": "Chinese",
     "header.langEn": "EN",
 
     "sidebar.title": "Monitored Cities",
@@ -374,24 +194,18 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
 };
 
 export function normalizeLocale(value?: string | null): Locale {
-  if (!value) return DEFAULT_LOCALE;
-  const normalized = value.toLowerCase();
-  if (normalized.startsWith("en")) return "en-US";
-  return "zh-CN";
+  return "en-US";
 }
 
 export function getInitialLocaleFromNavigator(): Locale {
-  if (typeof window === "undefined") return DEFAULT_LOCALE;
-  return normalizeLocale(window.navigator?.language);
+  return "en-US";
 }
 
 export function formatMessage(
-  locale: Locale,
   key: string,
   params?: MessageParams,
 ): string {
-  const template =
-    MESSAGES[locale]?.[key] || MESSAGES[DEFAULT_LOCALE][key] || key;
+  const template = MESSAGES["en-US"]?.[key] || key;
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (_, token) => {
     const value = params[token];

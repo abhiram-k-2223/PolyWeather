@@ -27,10 +27,10 @@ export function TemperatureRunwayDetails({
   return (
     <div className="shrink-0 border-b border-slate-200 bg-[#f8fafc] px-3 py-2">
       <div className="flex items-center justify-between text-[11px] font-black text-slate-700 mb-1.5 uppercase">
-        <span>{isEn ? "Runway Observations" : "跑道观测"}</span>
+        <span>{isEn ? "Runway Observations" : "Runway Observations"}</span>
         {plates.some((p) => p.trend_15m !== null && p.trend_15m > 0 && !p.isSettlement) && (
           <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-sans">
-            {isEn ? "Non-settlement Runway Warming Alert" : "非结算跑道升温提醒"}
+            {isEn ? "Non-settlement Runway Warming Alert" : "Non-settlement Runway Warming Alert"}
           </span>
         )}
       </div>
@@ -50,7 +50,7 @@ export function TemperatureRunwayDetails({
               <span>{plate.rwy}</span>
               {plate.isSettlement && (
                 <span className="text-[9px] bg-teal-200 text-teal-800 px-1 rounded font-normal">
-                  {isEn ? "Settlement" : "结算"}
+                  {isEn ? "Settlement" : "Settlement"}
                 </span>
               )}
             </div>

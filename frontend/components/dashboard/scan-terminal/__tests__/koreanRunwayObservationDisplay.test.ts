@@ -73,7 +73,7 @@ export function runTests() {
     "Seoul airport_primary AMOS runway observation must not be exposed for display",
   );
 
-  const pace = getTodayPaceView(seoul, "zh-CN");
+  const pace = getTodayPaceView(seoul, "en-US");
   assert(pace?.observedNow === 26, "pace view should fall back to METAR/current, not AMOS runway temp");
 
   const busan = baseDetail({

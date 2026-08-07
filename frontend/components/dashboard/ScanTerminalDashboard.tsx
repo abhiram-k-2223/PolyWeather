@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Crown,
   GraduationCap,
   Menu,
   MessageSquare,
@@ -18,12 +17,9 @@ import {
   Users,
 } from "lucide-react";
 import { Fragment, memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import type { CityListItem, ProAccessState, ScanOpportunityRow } from "@/lib/dashboard-types";
+import type { CityListItem, ScanOpportunityRow } from "@/lib/dashboard-types";
 import { getInitialLocaleFromNavigator } from "@/lib/i18n";
-import { isBrowserLocalFullAccess } from "@/lib/local-dev-access";
-import { getSupabaseBrowserClient, hasSupabasePublicEnv } from "@/lib/supabase/client";
 import { sortRowsByUserTime } from "@/components/dashboard/scan-terminal/decision-utils";
-import { ProductAccessRequired } from "@/components/dashboard/scan-terminal/ProductAccessRequired";
 import {
   type ContinentGroup,
   buildContinentGroups,
@@ -64,15 +60,6 @@ import {
 import { UserFeedbackStatusButton } from "@/components/dashboard/scan-terminal/UserFeedbackStatusButton";
 import { UpdateAnnouncementButton } from "@/components/dashboard/scan-terminal/UpdateAnnouncementButton";
 import {
-  mergeAccessStateWithAuthPayload,
-  type AuthProfilePayload,
-} from "@/components/dashboard/scan-terminal/terminal-access-state";
-import {
-  createAuthProfileRequestCache,
-  loadTerminalAuthProfile,
-} from "@/components/dashboard/scan-terminal/terminal-auth-bootstrap";
-import { buildAuthMePath } from "@/lib/auth-snapshot";
-import {
   cityListItemsToScanRows,
   mergeScanRowsWithCityFallbackRows,
   readCachedCityList,
@@ -80,7 +67,6 @@ import {
 } from "@/components/dashboard/scan-terminal/city-fallback-rows";
 import { markAnalyticsOnce, trackAppEvent } from "@/lib/app-analytics";
 import { STATIC_CITY_LIST } from "@/lib/static-cities";
-import { recordTrialValueReplay } from "@/lib/trial-value-replay";
 
 const TrainingDashboard = dynamic(
   () =>
@@ -102,111 +88,6 @@ const TERMINAL_NAV_ITEMS = [
   { key: "training", Icon: GraduationCap, labelEn: "Training", labelZh: "训练数据" },
   { key: "guide", Icon: BookOpenCheck, labelEn: "Guide", labelZh: "使用指南" },
 ] as const;
-const AUTH_PROFILE_REQUEST_TIMEOUT_MS = 4500;
-const AUTH_DECISION_RECOVERY_MS = 10_000;
-const AUTH_PROFILE_RETRY_INITIAL_DELAY_MS = 5_000;
-const AUTH_PROFILE_RETRY_POLL_MS = 30_000;
-const ACTIVE_ACCESS_CACHE_KEY = "polyweather_terminal_active_access_v1";
-const ACTIVE_ACCESS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-
-function createEmptyAccess(loading = true): ProAccessState {
-  return {
-    loading,
-    authenticated: false,
-    userId: null,
-    subscriptionActive: false,
-    subscriptionPlanCode: null,
-    subscriptionExpiresAt: null,
-    subscriptionTotalExpiresAt: null,
-    subscriptionQueuedDays: 0,
-    points: 0,
-    error: null,
-  };
-}
-
-function createLocalAccess(): ProAccessState {
-  return {
-    loading: false,
-    authenticated: true,
-    userId: "local-dev",
-    subscriptionActive: true,
-    subscriptionPlanCode: "local-full-access",
-    subscriptionExpiresAt: "2099-12-31T23:59:59Z",
-    subscriptionTotalExpiresAt: "2099-12-31T23:59:59Z",
-    subscriptionQueuedDays: 0,
-    points: 999_999,
-    error: null,
-  };
-}
-
-function isFutureAccessExpiry(value: string | null | undefined, now = Date.now()) {
-  if (!value) return true;
-  const ts = Date.parse(value);
-  return Number.isFinite(ts) && ts > now;
-}
-
-function readCachedActiveAccess(now = Date.now()): ProAccessState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(ACTIVE_ACCESS_CACHE_KEY);
-    if (!raw) return null;
-    const cached = JSON.parse(raw);
-    const access = cached?.access as Partial<ProAccessState> | undefined;
-    const ts = Number(cached?.ts || 0);
-    if (!access?.authenticated || !access.subscriptionActive) return null;
-    if (!ts || now - ts < 0 || now - ts > ACTIVE_ACCESS_CACHE_TTL_MS) return null;
-    if (!isFutureAccessExpiry(access.subscriptionTotalExpiresAt || access.subscriptionExpiresAt, now)) {
-      return null;
-    }
-    return {
-      loading: false,
-      authenticated: true,
-      userId: access.userId ?? null,
-      subscriptionActive: true,
-      subscriptionPlanCode: access.subscriptionPlanCode ?? null,
-      subscriptionExpiresAt: access.subscriptionExpiresAt ?? null,
-      subscriptionTotalExpiresAt:
-        access.subscriptionTotalExpiresAt ?? access.subscriptionExpiresAt ?? null,
-      subscriptionQueuedDays: Number(access.subscriptionQueuedDays ?? 0),
-      points: Number(access.points ?? 0),
-      error: null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedActiveAccess(access: ProAccessState) {
-  if (typeof window === "undefined") return;
-  if (!access.authenticated || !access.subscriptionActive) return;
-  if (!isFutureAccessExpiry(access.subscriptionTotalExpiresAt || access.subscriptionExpiresAt)) return;
-  try {
-    window.localStorage.setItem(
-      ACTIVE_ACCESS_CACHE_KEY,
-      JSON.stringify({
-        ts: Date.now(),
-        access: {
-          authenticated: access.authenticated,
-          userId: access.userId,
-          subscriptionActive: access.subscriptionActive,
-          subscriptionPlanCode: access.subscriptionPlanCode,
-          subscriptionExpiresAt: access.subscriptionExpiresAt,
-          subscriptionTotalExpiresAt: access.subscriptionTotalExpiresAt,
-          subscriptionQueuedDays: access.subscriptionQueuedDays,
-          points: access.points,
-        },
-      }),
-    );
-  } catch {}
-}
-
-function createTransientAccess(error: unknown): ProAccessState {
-  return {
-    ...createEmptyAccess(true),
-    authenticated: true,
-    error: String(error),
-  };
-}
 
 const TERM = {
   cityThreshold: { en: "City / Threshold", zh: "城市 / 阈值" },
@@ -623,9 +504,6 @@ function PolyWeatherTerminal({
   selectedRow,
   setSelectedRow,
   toggleLocale,
-  isTrialTerminalAccess,
-  trialSubscriptionExpiresAt,
-  trialUserId,
   userLocalTime,
   searchQuery,
   setSearchQuery,
@@ -646,9 +524,6 @@ function PolyWeatherTerminal({
   selectedRow: ScanOpportunityRow | null;
   setSelectedRow: (row: ScanOpportunityRow) => void;
   toggleLocale: () => void;
-  isTrialTerminalAccess: boolean;
-  trialSubscriptionExpiresAt: string | null;
-  trialUserId: string | null;
   userLocalTime: string;
   searchQuery: string;
   setSearchQuery: (val: string) => void;
@@ -685,17 +560,6 @@ function PolyWeatherTerminal({
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [feedbackDraft, setFeedbackDraft] = useState<FeedbackDraft | null>(null);
   const [feedbackRefreshKey, setFeedbackRefreshKey] = useState(0);
-  const trialExpiryMs = Date.parse(String(trialSubscriptionExpiresAt || ""));
-  const trialHoursLeft = Number.isFinite(trialExpiryMs)
-    ? Math.max(0, Math.ceil((trialExpiryMs - Date.now()) / 3_600_000))
-    : null;
-  const trialUpgradeLabel = isEn
-    ? trialHoursLeft != null
-      ? `Trial ${trialHoursLeft}h left`
-      : "Trial access"
-    : trialHoursLeft != null
-      ? `试用剩 ${trialHoursLeft} 小时`
-      : "试用中";
   const handleSelectNav = useCallback((key: string) => {
     setActiveNavKey(key);
   }, []);
@@ -891,27 +755,7 @@ function PolyWeatherTerminal({
     .filter((row) => Number(row.edge_percent ?? row.signed_gap ?? row.gap ?? 0) < 0)
     .slice(0, 8);
 
-  const selectedSignal = selectedRow ? getSignalState(selectedRow) : "data" as const;
-  const selectedLabel = selectedRow ? getSignalLabel(selectedSignal, isEn) : "";
-
-  useEffect(() => {
-    if (!isTrialTerminalAccess || !selectedRow) return;
-    recordTrialValueReplay({
-      userId: trialUserId,
-      cityName: rowName(selectedRow),
-      signalLabel: selectedLabel,
-      rowsAvailable: filteredRegionRows.length || rows.length,
-    });
-  }, [
-    filteredRegionRows.length,
-    isTrialTerminalAccess,
-    rows.length,
-    selectedLabel,
-    selectedRow,
-    trialUserId,
-  ]);
-
-  const continentGroups = useMemo(
+    const continentGroups = useMemo(
     () => buildContinentGroups(filteredRegionRows, isEn),
     [filteredRegionRows, isEn]
   );
@@ -1002,17 +846,6 @@ function PolyWeatherTerminal({
             <div className="hidden lg:block">
               <UpdateAnnouncementButton isEn={isEn} />
             </div>
-            {isTrialTerminalAccess && (
-              <Link
-                href="/account?checkout=1"
-                className="inline-flex h-7 items-center gap-2 rounded border border-amber-300 bg-amber-50 px-2.5 text-[11px] font-black text-amber-800 transition hover:bg-amber-100"
-                title={isEn ? "Upgrade to Pro" : "升级 Pro"}
-              >
-                <Crown size={12} />
-                <span className="hidden sm:inline">{trialUpgradeLabel}</span>
-                <span>{isEn ? "Upgrade" : "升级"}</span>
-              </Link>
-            )}
             {onlineCount != null && (
               <div className="hidden items-center gap-1 text-[10px] font-medium text-slate-400 lg:flex">
                 <Users size={12} />
@@ -1038,7 +871,7 @@ function PolyWeatherTerminal({
             >
               {isEn ? "中文" : "EN"}
             </button>
-            <UserFeedbackStatusButton isEn={isEn} refreshKey={feedbackRefreshKey} />
+            <UserFeedbackStatusButton refreshKey={feedbackRefreshKey} />
             <Link
               href="/account"
               className="grid h-7 w-7 place-items-center rounded-full border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
@@ -1067,8 +900,8 @@ function PolyWeatherTerminal({
                   />
                   <div className="mx-2 mt-1 rounded border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold leading-3 text-blue-700">
                     {isEn
-                      ? "Mobile renders one chart. Rotate to landscape for the full grid."
-                      : "手机端仅渲染 1 个图表。建议横屏查看完整终端网格。"}
+                      ? "Mobile renders one chart. Landscape recommended. Rotate to landscape for the full grid."
+                      : "Mobile renders one chart. Landscape recommended. Rotate to landscape for the full grid."}
                   </div>
                 </div>
                 {mobileChartRow && (
@@ -1264,218 +1097,13 @@ function PolyWeatherTerminal({
   );
 }
 
-function AuthSyncRecoveryScreen({
-  isEn,
-  onRetry,
-  rootClassName,
-  retrying,
-  themeMode,
-  userLocalTime,
-}: {
-  isEn: boolean;
-  onRetry: () => void;
-  rootClassName: string;
-  retrying: boolean;
-  themeMode: "dark" | "light";
-  userLocalTime: string;
-}) {
-  return (
-    <div className={rootClassName}>
-      <div className={clsx("flex h-screen w-full bg-[#e9edf3] text-slate-950", themeMode === "light" && "light")}>
-        <aside className="w-[52px] bg-[#171d24]" />
-        <main className="flex flex-1 flex-col">
-          <header className="flex h-[52px] items-center justify-between border-b border-slate-200 bg-white px-4">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-90">
-              <img src="/logo.png" alt="PolyWeather" className="h-7 w-auto object-contain" />
-              <span className="text-sm font-semibold tracking-tight text-slate-900">Terminal</span>
-            </Link>
-            <div className="font-mono text-sm text-slate-500">{userLocalTime}</div>
-          </header>
-          <section className="grid flex-1 place-items-center p-6">
-            <div className="w-full max-w-md rounded-[6px] border border-amber-200 bg-white p-6 shadow-sm">
-              <div className="mb-3 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700">
-                {isEn ? "Access sync timeout" : "权限同步超时"}
-              </div>
-              <h1 className="text-xl font-black text-slate-950">
-                {isEn ? "We could not confirm your subscription yet" : "暂时未能确认你的订阅状态"}
-              </h1>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {isEn
-                  ? "The session or entitlement service is taking too long. Retry access sync; if you just paid, wait a few seconds and try again."
-                  : "当前会话或会员服务响应过慢。请先重新同步权限；如果刚完成支付，等待几秒后再试。"}
-              </p>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  disabled={retrying}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-[4px] bg-blue-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-70"
-                >
-                  {retrying && (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
-                  )}
-                  {isEn ? "Retry access sync" : "重新同步权限"}
-                </button>
-                <Link
-                  href="/account"
-                  className="inline-flex flex-1 items-center justify-center rounded-[4px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
-                >
-                  {isEn ? "Open account" : "打开账户页"}
-                </Link>
-              </div>
-            </div>
-          </section>
-        </main>
-      </div>
-    </div>
-  );
-}
-
 function ScanTerminalScreen() {
-  const [proAccess, setProAccess] = useState<ProAccessState>(() =>
-    createEmptyAccess(true),
-  );
-
-  const rawLoadAuthProfile = useCallback(
-    async (
-      accessToken?: string | null,
-      options?: { preferSnapshot?: boolean },
-    ): Promise<AuthProfilePayload> => {
-      const headers: Record<string, string> = { Accept: "application/json" };
-      const token = String(accessToken || "").trim();
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-      const timeoutId = controller
-        ? globalThis.setTimeout(() => controller.abort(), AUTH_PROFILE_REQUEST_TIMEOUT_MS)
-        : null;
-      try {
-        const response = await fetch(
-          buildAuthMePath({
-            preferSnapshot: options?.preferSnapshot,
-            scope: "entitlement",
-          }),
-          {
-            cache: "no-store",
-            headers,
-            signal: controller?.signal,
-          },
-        );
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<AuthProfilePayload>;
-      } finally {
-        if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
-      }
-    },
-    [],
-  );
-  const authProfileRequestCacheRef = useRef<{
-    load: typeof rawLoadAuthProfile;
-    cached: ReturnType<typeof createAuthProfileRequestCache>;
-  } | null>(null);
-  const loadAuthProfile = useCallback(
-    (
-      accessToken?: string | null,
-      options?: { preferSnapshot?: boolean },
-    ): Promise<AuthProfilePayload> => {
-      const current = authProfileRequestCacheRef.current;
-      if (current?.load === rawLoadAuthProfile) {
-        return current.cached(accessToken, options);
-      }
-      const next = {
-        load: rawLoadAuthProfile,
-        cached: createAuthProfileRequestCache(rawLoadAuthProfile),
-      };
-      authProfileRequestCacheRef.current = next;
-      return next.cached(accessToken, options);
-    },
-    [rawLoadAuthProfile],
-  );
-
-  const refreshLiveAuthProfile = useCallback(async () => {
-    const supabaseEnabled = hasSupabasePublicEnv();
-    const payload = await loadTerminalAuthProfile({
-      getSession: () =>
-        supabaseEnabled
-          ? getSupabaseBrowserClient().auth.getSession()
-          : Promise.resolve({ data: { session: null } }),
-      hasSupabasePublicEnv: supabaseEnabled,
-      loadAuthProfile: (accessToken) =>
-        loadAuthProfile(accessToken, { preferSnapshot: false }),
-      timeoutMs: AUTH_PROFILE_REQUEST_TIMEOUT_MS + 2000,
-    });
-    setProAccess((prev) => mergeAccessStateWithAuthPayload(prev, payload));
-  }, [loadAuthProfile]);
-
-  // Listen to Supabase auth events (e.g. token refreshed, signed out)
-  useEffect(() => {
-    if (!hasSupabasePublicEnv()) return;
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === "SIGNED_OUT") {
-          try {
-            const {
-              data: { session: currentSession },
-            } = await supabase.auth.getSession();
-            const accessToken =
-              currentSession?.access_token || session?.access_token || null;
-            if (accessToken) {
-              const payload = await loadAuthProfile(accessToken);
-              setProAccess((prev) => mergeAccessStateWithAuthPayload(prev, payload));
-              return;
-            }
-          } catch {}
-          setProAccess(createEmptyAccess(false));
-        } else if (
-          event === "INITIAL_SESSION" ||
-          event === "TOKEN_REFRESHED" ||
-          event === "SIGNED_IN"
-        ) {
-          try {
-            if (!session?.access_token) return;
-            const payload = await loadAuthProfile(session?.access_token);
-            setProAccess((prev) => mergeAccessStateWithAuthPayload(prev, payload));
-          } catch {}
-        }
-      });
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch {}
-  }, []);
-
-  // Periodically touch the session to trigger background refresh if near expiry
-  useEffect(() => {
-    if (!hasSupabasePublicEnv()) return;
-    const supabase = getSupabaseBrowserClient();
-    const interval = setInterval(async () => {
-      try {
-        await supabase.auth.getSession();
-      } catch {}
-    }, 15 * 60 * 1000); // every 15 minutes
-    
-    return () => clearInterval(interval);
-  }, []);
   const [locale, setLocale] = useState<"zh-CN" | "en-US">("zh-CN");
   const isEn = locale === "en-US";
   const toggleLocale = () =>
     setLocale((prev) => (prev === "zh-CN" ? "en-US" : "zh-CN"));
   const [hydrated, setHydrated] = useState(false);
-  const [localFullAccess, setLocalFullAccess] = useState(false);
-  const [authWaitExpired, setAuthWaitExpired] = useState(false);
-  const [authRetrying, setAuthRetrying] = useState(false);
-  const canUseLocalFullAccess = hydrated && localFullAccess;
-  const isAuthenticated =
-    hydrated && (proAccess.authenticated || canUseLocalFullAccess);
-  const isPro =
-    hydrated && (proAccess.subscriptionActive || canUseLocalFullAccess);
-  const accessDecisionPending =
-    !hydrated || (proAccess.loading && !canUseLocalFullAccess && !authWaitExpired);
-  const authSyncRecoveryNeeded =
-    hydrated && proAccess.loading && !canUseLocalFullAccess && authWaitExpired;
-  const shouldShowPaywall = !accessDecisionPending && (!isAuthenticated || !isPro);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const userLocalTime = useUserLocalClock();
   const { themeMode } = useScanTerminalTheme();
   const [selectedRegionKey, setSelectedRegionKey] = useState<string>("all");
@@ -1503,132 +1131,34 @@ function ScanTerminalScreen() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
     setHydrated(true);
     setLocale(getInitialLocaleFromNavigator());
-    const localAccess = isBrowserLocalFullAccess();
-    setLocalFullAccess(localAccess);
-    if (localAccess) {
-      setProAccess(createLocalAccess());
-      return () => {
-        cancelled = true;
-      };
-    }
-    const cachedActiveAccess = readCachedActiveAccess();
-    if (cachedActiveAccess) {
-      setProAccess(cachedActiveAccess);
-    }
-    if (typeof fetch !== "function") {
-      setProAccess(createEmptyAccess(false));
-      return () => {
-        cancelled = true;
-      };
-    }
-    const supabaseEnabled = hasSupabasePublicEnv();
-    loadTerminalAuthProfile({
-      getSession: () =>
-        supabaseEnabled
-          ? getSupabaseBrowserClient().auth.getSession()
-          : Promise.resolve({ data: { session: null } }),
-      hasSupabasePublicEnv: supabaseEnabled,
-      loadAuthProfile,
-      timeoutMs: AUTH_PROFILE_REQUEST_TIMEOUT_MS + 2000,
+    const controller =
+      typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeoutId = controller
+      ? globalThis.setTimeout(() => controller.abort(), 4500)
+      : null;
+    fetch("/api/auth/me", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller?.signal,
     })
-      .then((payload) => {
-        if (cancelled) return;
-        setProAccess((prev) => mergeAccessStateWithAuthPayload(prev, payload));
-        if (payload.entitlement_snapshot === true) {
-          window.setTimeout(() => {
-            if (!cancelled) void refreshLiveAuthProfile();
-          }, 0);
-        }
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const payload = await response.json();
+        return String(payload?.user_id || "").trim() || null;
       })
-      .catch((error) => {
-        if (cancelled) return;
-        setProAccess((prev) => (
-          prev.subscriptionActive
-            ? { ...prev, loading: false, error: String(error) }
-            : createTransientAccess(error)
-        ));
+      .then((userId) => {
+        if (typeof userId === "string" && userId) setCurrentUserId(userId);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
       });
     return () => {
-      cancelled = true;
+      controller?.abort();
     };
-  }, [loadAuthProfile, refreshLiveAuthProfile]);
-
-  useEffect(() => {
-    if (!hydrated || !proAccess.loading || canUseLocalFullAccess) {
-      setAuthWaitExpired(false);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setAuthWaitExpired(true);
-    }, AUTH_DECISION_RECOVERY_MS);
-    return () => window.clearTimeout(timer);
-  }, [canUseLocalFullAccess, hydrated, proAccess.loading]);
-
-  useEffect(() => {
-    if (hydrated && proAccess.authenticated && proAccess.subscriptionActive) {
-      writeCachedActiveAccess(proAccess);
-    }
-  }, [hydrated, proAccess]);
-
-  useEffect(() => {
-    if (
-      !hydrated ||
-      canUseLocalFullAccess ||
-      !proAccess.authenticated ||
-      !proAccess.loading ||
-      proAccess.subscriptionActive ||
-      typeof fetch !== "function"
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    const supabaseEnabled = hasSupabasePublicEnv();
-    const retryAuthProfile = async () => {
-      try {
-        const payload = await loadTerminalAuthProfile({
-          getSession: () =>
-            supabaseEnabled
-              ? getSupabaseBrowserClient().auth.getSession()
-              : Promise.resolve({ data: { session: null } }),
-          hasSupabasePublicEnv: supabaseEnabled,
-          loadAuthProfile,
-          timeoutMs: AUTH_PROFILE_REQUEST_TIMEOUT_MS + 2000,
-        });
-        if (cancelled) return;
-        setProAccess((prev) => mergeAccessStateWithAuthPayload(prev, payload));
-      } catch (error) {
-        if (cancelled) return;
-        setProAccess((prev) =>
-          prev.loading && prev.authenticated && !prev.subscriptionActive
-            ? { ...prev, error: String(error) }
-            : prev,
-        );
-      }
-    };
-
-    const firstRetry = window.setTimeout(() => {
-      void retryAuthProfile();
-    }, AUTH_PROFILE_RETRY_INITIAL_DELAY_MS);
-    const interval = window.setInterval(() => {
-      void retryAuthProfile();
-    }, AUTH_PROFILE_RETRY_POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(firstRetry);
-      window.clearInterval(interval);
-    };
-  }, [
-    canUseLocalFullAccess,
-    hydrated,
-    loadAuthProfile,
-    proAccess.authenticated,
-    proAccess.loading,
-    proAccess.subscriptionActive,
-  ]);
+  }, []);
 
   useEffect(() => {
     setSelectedRegionKey("all");
@@ -1642,37 +1172,24 @@ function ScanTerminalScreen() {
 
   const { refreshScanTerminalManually, scanLoading, terminalData } =
     useScanTerminalQuery({
-      isPro,
-      proAccessLoading: !hydrated || (proAccess.loading && !canUseLocalFullAccess),
       timezoneOffsetSeconds: useLocalTimezoneDefault ? localTimezoneOffsetSeconds : null,
       tradingRegion: selectedRegionKey,
     });
 
   useEffect(() => {
-    if (!hydrated || !isAuthenticated || !isPro) return;
-    const actorKey = String(proAccess.userId || "local").toLowerCase();
+    if (!hydrated) return;
+    const actorKey = String(currentUserId || "anonymous").toLowerCase();
     if (markAnalyticsOnce(`enter_terminal:${actorKey}`, "session")) {
       trackAppEvent("enter_terminal", {
         entry: "terminal",
-        user_id: proAccess.userId || null,
+        user_id: currentUserId,
       });
     }
-  }, [hydrated, isAuthenticated, isPro, proAccess.userId]);
+  }, [hydrated, currentUserId]);
   const handleRefresh = useCallback(() => {
     clearCityDetailCache();
     refreshScanTerminalManually();
   }, [refreshScanTerminalManually]);
-  const handleRetryAuthSync = useCallback(() => {
-    setAuthRetrying(true);
-    setAuthWaitExpired(false);
-    void refreshLiveAuthProfile()
-      .catch((error) => {
-        setProAccess((prev) => ({ ...prev, error: String(error) }));
-      })
-      .finally(() => {
-        setAuthRetrying(false);
-      });
-  }, [refreshLiveAuthProfile]);
 
   const [cityFallbackRows, setCityFallbackRows] = useState<ScanOpportunityRow[]>(() =>
     cityListItemsToScanRows(readCachedCityList() || STATIC_CITY_LIST),
@@ -1686,14 +1203,9 @@ function ScanTerminalScreen() {
     },
     [cityFallbackRows, terminalData?.rows],
   );
-  const isTrialTerminalAccess = Boolean(
-    isPro &&
-      String(proAccess.subscriptionPlanCode || "").toLowerCase().includes("signup_trial"),
-  );
-
   const fallbackFetchedRef = useRef(false);
   useEffect(() => {
-    if (!isPro || typeof fetch !== "function") return;
+    if (typeof fetch !== "function") return;
     if (fallbackFetchedRef.current) return;
     const cachedCities = readCachedCityList();
     if (cachedCities) {
@@ -1719,7 +1231,7 @@ function ScanTerminalScreen() {
       })
       .catch(() => {});
     return () => controller.abort();
-  }, [isPro]);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1758,35 +1270,12 @@ function ScanTerminalScreen() {
   }, []);
   const generatedText = useRelativeTime(terminalData?.generated_at ?? null);
 
-  if (accessDecisionPending) {
+  if (!hydrated) {
     return (
       <ScanTerminalLoadingScreen
         isEn={isEn}
         rootClassName={scanRootClass}
         themeMode={themeMode}
-        userLocalTime={userLocalTime}
-      />
-    );
-  }
-
-  if (authSyncRecoveryNeeded) {
-    return (
-      <AuthSyncRecoveryScreen
-        isEn={isEn}
-        onRetry={handleRetryAuthSync}
-        rootClassName={scanRootClass}
-        retrying={authRetrying}
-        themeMode={themeMode}
-        userLocalTime={userLocalTime}
-      />
-    );
-  }
-
-  if (shouldShowPaywall) {
-    return (
-      <ProductAccessRequired
-        isAuthenticated={isAuthenticated}
-        isEn={isEn}
         userLocalTime={userLocalTime}
       />
     );
@@ -1803,11 +1292,6 @@ function ScanTerminalScreen() {
       selectedRow={selectedRow}
       setSelectedRow={handleSelectRow}
       toggleLocale={toggleLocale}
-      isTrialTerminalAccess={isTrialTerminalAccess}
-      trialSubscriptionExpiresAt={
-        proAccess.subscriptionTotalExpiresAt || proAccess.subscriptionExpiresAt
-      }
-      trialUserId={proAccess.userId}
       userLocalTime={userLocalTime}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}

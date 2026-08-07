@@ -8,23 +8,19 @@ export type MarketRegionKey =
 
 type RegionMeta = {
   key: MarketRegionKey;
-  labelEn: string;
-  labelZh: string;
+  label: string;
 };
 
 export type RowTradingStage = {
   key: string;
   rank: number;
   score: number;
-  labelEn: string;
-  labelZh: string;
+  label: string;
 };
 
 export type MarketFocus = {
   key: MarketRegionKey;
   label: string;
-  labelEn: string;
-  labelZh: string;
   stageLabel: string;
   activeCityCount: number;
   opportunityCount: number;
@@ -35,23 +31,19 @@ export type MarketFocus = {
 const REGION_META: Record<MarketRegionKey, RegionMeta> = {
   americas: {
     key: "americas",
-    labelEn: "Americas",
-    labelZh: "美洲",
+    label: "Americas",
   },
   europe_africa: {
     key: "europe_africa",
-    labelEn: "Europe / Africa",
-    labelZh: "欧洲 / 非洲",
+    label: "Europe / Africa",
   },
   asia_pacific: {
     key: "asia_pacific",
-    labelEn: "Asia-Pacific",
-    labelZh: "亚太",
+    label: "Asia-Pacific",
   },
   unknown: {
     key: "unknown",
-    labelEn: "Global",
-    labelZh: "全球",
+    label: "Global",
   },
 };
 
@@ -127,14 +119,9 @@ function clamp(value: number, min: number, max: number) {
 
 export function getMarketRegionMeta(
   key?: string | null,
-  locale = "zh-CN",
-): RegionMeta & { label: string } {
+): RegionMeta {
   const normalized = normalizeKey(key).replace(/\s+/g, "_") as MarketRegionKey;
-  const meta = REGION_META[normalized] || REGION_META.unknown;
-  return {
-    ...meta,
-    label: locale === "en-US" ? meta.labelEn : meta.labelZh,
-  };
+  return REGION_META[normalized] || REGION_META.unknown;
 }
 
 export function getRowMarketRegion(row: ScanOpportunityRow): MarketRegionKey {
@@ -166,8 +153,7 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
       key: "active_peak",
       rank: 0,
       score: 4,
-      labelEn: "Peak / settle window",
-      labelZh: "峰值 / 结算窗口",
+      label: "Peak / settle window",
     };
   }
 
@@ -180,8 +166,7 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
       key: "setup_today",
       rank: 1,
       score: 3,
-      labelEn: "Pre-peak setup",
-      labelZh: "峰值前准备",
+      label: "Pre-peak setup",
     };
   }
 
@@ -194,8 +179,7 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
       key: "post_peak",
       rank: 2,
       score: 2,
-      labelEn: "Post-peak confirmation",
-      labelZh: "峰值后确认",
+      label: "Post-peak confirmation",
     };
   }
 
@@ -204,8 +188,7 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
       key: "early_today",
       rank: 3,
       score: 0.5,
-      labelEn: "Early session",
-      labelZh: "早盘预备",
+      label: "Early session",
     };
   }
 
@@ -214,8 +197,7 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
       key: "tomorrow",
       rank: 4,
       score: 0.25,
-      labelEn: "Next session",
-      labelZh: "下一交易日",
+      label: "Next session",
     };
   }
 
@@ -223,14 +205,12 @@ export function getRowTradingStage(row: ScanOpportunityRow): RowTradingStage {
     key: phase || "unknown",
     rank: 5,
     score: 0,
-    labelEn: "Outside active window",
-    labelZh: "非活跃窗口",
+    label: "Outside active window",
   };
 }
 
 export function getMarketFocus(
   rows: ScanOpportunityRow[],
-  locale = "zh-CN",
 ): MarketFocus | null {
   if (!rows.length) return null;
 
@@ -300,15 +280,13 @@ export function getMarketFocus(
 
   const [key, value] = ranked[0] || [];
   if (!key || !value) return null;
-  const meta = getMarketRegionMeta(key, locale);
+  const meta = getMarketRegionMeta(key);
   const stage = value.leadStage || getRowTradingStage(value.leadRow || rows[0]);
 
   return {
     key,
     label: meta.label,
-    labelEn: meta.labelEn,
-    labelZh: meta.labelZh,
-    stageLabel: locale === "en-US" ? stage.labelEn : stage.labelZh,
+    stageLabel: stage.label,
     activeCityCount: value.activeCities.size,
     opportunityCount: value.rows.length,
     score: value.maxStageScore * 100 + value.activeCities.size * 10 + value.score,

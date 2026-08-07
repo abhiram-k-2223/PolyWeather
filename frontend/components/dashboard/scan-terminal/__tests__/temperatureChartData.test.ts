@@ -39,7 +39,6 @@ export function runTests() {
       forecast: { today_high: 28 },
       deb: { prediction: 28 },
     } as CityDetail,
-    "zh-CN",
   );
 
   assert(chartData, "temperature chart data should exist for ISO datetime hourly input");
@@ -135,7 +134,6 @@ export function runTests() {
         },
       },
     } as CityDetail,
-    "zh-CN",
   );
   assert(
     correctedDetailChart?.datasets.debSeries.some((point) => point.labelTime === "12:00" && point.y === 28.0),
@@ -166,7 +164,6 @@ export function runTests() {
       },
       metar_today_obs: [{ time: "13:00", temp: 22 }],
     } as unknown as CityDetail,
-    "zh-CN",
   );
 
   assert(
@@ -186,7 +183,7 @@ export function runTests() {
     "Ankara chart should still expose a calibrated path when observation points exist",
   );
 
-  // ── Moscow 场景：forecast.today_high 不可靠 → DEB offset 优先用 hourly 自身 max ──
+  // ── Moscow scenario: forecast.today_high unreliable → DEB offset prefers hourly max ──
   const moscowTimes = [
     "00:00", "00:30", "01:00", "01:30", "02:00", "02:30",
     "03:00", "03:30", "04:00", "04:30", "05:00", "05:30",
@@ -228,14 +225,14 @@ export function runTests() {
     0.3,
     "Moscow: DEB 24.5 vs hourly max 24.7 → offset ≈ -0.2",
   );
-  // 验证后半段曲线没有被整体抬升 +3.1
+  // Verify the second half curve is not inflated by +3.1
   const moscowAfternoon = moscowBaseline.debTemps[peakIndex + 6]; // 18:00
   assert(
     moscowAfternoon != null && moscowAfternoon < 22,
     `Moscow 18:00 should not be inflated by unreliable forecast.today_high; got ${moscowAfternoon}`,
   );
 
-  // ── Ankara 部分小时数据：DEB 路径覆盖全天 48 点 ──
+  // ── Ankara partial hourly data: DEB path covers full 48 points ──
   const ankaraPartial = buildDebBaselinePath(
     ["11:00", "12:00", "13:00", "14:00"],
     [19, 21, 22, 23],
@@ -254,7 +251,7 @@ export function runTests() {
   const ankaraValid = ankaraPartial.debTemps.filter((t) => t != null && Number.isFinite(t));
   assert(ankaraValid.length >= 4, "Ankara partial: all input points should be valid");
 
-  // ── 正常城市：完整 hourly → offset 基于 hourly max ──
+  // ── Normal city: full hourly → offset based on hourly max ──
   const normalHourlyTimes = moscowTimes;
   const normalHourlyTemps = moscowTimes.map((t) => {
     const h = Number.parseInt(t.split(":")[0], 10);

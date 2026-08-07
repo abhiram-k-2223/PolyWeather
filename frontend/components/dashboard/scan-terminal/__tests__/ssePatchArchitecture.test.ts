@@ -221,7 +221,7 @@ export function runTests() {
   assert(chartCanvas.includes("filterNull={false}"), "temperature chart tooltip must keep null-slot payload so hover works between sparse points");
   assert(chartTooltip.includes("nearestSeriesValue"), "temperature chart tooltip must fall back to nearest non-null value for connected sparse lines");
   assert(chart.includes("isHourlyLoading"), "temperature chart must keep a per-panel hourly loading state");
-  assert(chartCanvas.includes("加载图表") && chartCanvas.includes("absolute inset-2"), "temperature chart must render an in-chart loading overlay");
+  assert(chartCanvas.includes("Loading chart") && chartCanvas.includes("absolute inset-2"), "temperature chart must render an in-chart loading overlay");
   assert(chart.includes("hasLoadedHourlyDetailRef"), "temperature chart must distinguish first load from background refreshes");
   assert(chart.includes("currentCityLocalDate"), "temperature chart must track the current city-local date while the page stays open");
   assert(chart.includes("localDayRolloverFetchDateRef"), "temperature chart must avoid duplicate midnight rollover detail fetches");
@@ -267,11 +267,11 @@ export function runTests() {
   );
   assert(chart.includes("getDebPeakWindowRange"), "temperature chart must still derive the optional Peak view from the DEB peak window");
   assert(
-    chart.includes('isEn ? "Peak" : "高温"') && chart.includes('isEn ? "All Day" : "全天"'),
-    "temperature chart view-mode labels must translate 高温/全天 as Peak/All Day",
+    chart.includes('isEn ? "Peak" : "High"') && chart.includes('isEn ? "All Day" : "Full Day"'),
+    "temperature chart view-mode labels must translate High/Full Day as Peak/All Day",
   );
   assert(
-    !chart.includes('isEn ? "Auto" : "高温"') && !chart.includes('isEn ? "Full" : "全天"'),
+    !chart.includes('isEn ? "Auto" : "High"') && !chart.includes('isEn ? "Full" : "Full Day"'),
     "temperature chart view-mode labels must not expose internal Auto/Full wording",
   );
   assert(chart.includes("nextTargetResolution"), "temperature chart must derive target resolution without setting state on every render");
@@ -317,7 +317,7 @@ export function runTests() {
       chartLogic.includes("fetchCityDetailBatchWithTimeout") &&
       chartLogic.includes("signal: controller.signal") &&
       chartLogic.includes("controller.abort()"),
-    "city detail chart fetches must have a frontend timeout so panels cannot stay on 加载图表 forever",
+    "city detail chart fetches must have a frontend timeout so panels cannot stay on Loading chart forever",
   );
   assert(!chart.includes("3D"), "temperature chart UI must not expose a 3D/future-forecast mode");
   assert(!chart.includes("build3DayChartData"), "temperature chart component must not render future prediction curves");

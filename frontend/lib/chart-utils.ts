@@ -1,6 +1,5 @@
 import type { CityDetail } from "@/lib/dashboard-types";
 import { getDisplayAirportPrimary } from "@/lib/airport-observation-display";
-import type { Locale } from "@/lib/i18n";
 import {
   getNoaaStationCode,
   getObservationSourceCode,
@@ -27,10 +26,6 @@ import {
   type ChartTimeAxis,
   type DebBaselinePath,
 } from "@/lib/temperature-chart-paths";
-
-function isEnglish(locale: Locale) {
-  return locale === "en-US";
-}
 
 function sortObservationItemsByTime<T extends { time?: string | null }>(items: T[]) {
   return [...items].sort((left, right) => {
@@ -145,7 +140,6 @@ function buildCurrentObservationFallback(
 
 export function getTemperatureChartData(
   detail: CityDetail,
-  locale: Locale = "zh-CN",
 ) {
   const hourly = detail.hourly || {};
   const mgmHourlyRows = Array.isArray(detail.mgm?.hourly)
@@ -399,7 +393,6 @@ export function getTemperatureChartData(
       return {
         displayType: formatTafMarkerType(
           String(marker?.marker_type || "").trim(),
-          locale,
         ),
         endLocal: String(marker?.end_local || "").trim(),
         index,
@@ -407,9 +400,7 @@ export function getTemperatureChartData(
         markerType: String(marker?.marker_type || "").trim(),
         startLocal: String(marker?.start_local || "").trim(),
         summary:
-          isEnglish(locale)
-            ? String(marker?.summary_en || "").trim()
-            : String(marker?.summary_zh || "").trim(),
+          String(marker?.summary_en || "").trim(),
         isCurrent: false,
         isPeakWindow: false,
         suppressionLevel: String(marker?.suppression_level || "").trim(),
@@ -480,17 +471,13 @@ export function getTemperatureChartData(
   if (!hasMgmHourly && Math.abs(offset) > 0.3) {
     const sign = offset > 0 ? "+" : "";
     legendParts.push(
-      isEnglish(locale)
-        ? `DEB offset ${sign}${offset.toFixed(1)}${detail.temp_symbol} vs OM`
-        : `DEB 偏移 ${sign}${offset.toFixed(1)}${detail.temp_symbol} vs OM`,
+      `DEB offset ${sign}${offset.toFixed(1)}${detail.temp_symbol} vs OM`,
     );
   }
   if (calibratedPath.adjustmentDelta != null) {
     const sign = calibratedPath.adjustmentDelta > 0 ? "+" : "";
     legendParts.push(
-      isEnglish(locale)
-        ? `DEB calibrated path applies latest observation bias ${sign}${calibratedPath.adjustmentDelta.toFixed(1)}${detail.temp_symbol}.`
-        : `DEB 修正路径使用最新观测偏差 ${sign}${calibratedPath.adjustmentDelta.toFixed(1)}${detail.temp_symbol}。`,
+      `DEB calibrated path applies latest observation bias ${sign}${calibratedPath.adjustmentDelta.toFixed(1)}${detail.temp_symbol}.`,
     );
   }
   if (hasMgmHourly) {
@@ -501,13 +488,9 @@ export function getTemperatureChartData(
       Math.min(hourly.times.length, hourly.temps.length) > 0;
     const mgmIsForecastBase = !hasPrimaryHourly && isTurkishMgmCity(detail);
     legendParts.push(
-      isEnglish(locale)
-        ? mgmIsForecastBase
-          ? "Using MGM hourly forecast as the DEB curve base"
-          : "MGM hourly forecast is shown as official hourly guidance"
-        : mgmIsForecastBase
-          ? "已使用 MGM 小时预报作为 DEB 曲线基底"
-          : "MGM 小时预报作为官方小时指引显示",
+      mgmIsForecastBase
+        ? "Using MGM hourly forecast as the DEB curve base"
+        : "MGM hourly forecast is shown as official hourly guidance",
     );
   }
   if ((detail.trend?.recent?.length || 0) > 0 || observationSource.length > 0) {
@@ -527,11 +510,7 @@ export function getTemperatureChartData(
       .slice(-4)
       .map((item) => `${item.temp}${detail.temp_symbol}@${item.time}`)
       .join(" -> ");
-    legendParts.push(
-      isEnglish(locale)
-        ? `${metarFallbackTag}: ${airportRecentText}`
-        : `${metarFallbackTag}: ${airportRecentText}`,
-    );
+    legendParts.push(`${metarFallbackTag}: ${airportRecentText}`);
   }
   if (detail.metar_status?.stale_for_today) {
     const dateText = detail.metar_status.last_observation_local_date || "";
@@ -540,59 +519,37 @@ export function getTemperatureChartData(
         ? `${detail.metar_status.last_temp}${detail.temp_symbol}`
         : "";
     legendParts.push(
-      isEnglish(locale)
-        ? `No same-day ${metarFallbackTag} report yet; latest report${dateText ? ` was ${dateText}` : ""}${tempText ? ` at ${tempText}` : ""}.`
-        : `今日暂无同日 ${metarFallbackTag} 报文；最近一报${dateText ? `为 ${dateText}` : ""}${tempText ? `，${tempText}` : ""}。`,
+      `No same-day ${metarFallbackTag} report yet; latest report${dateText ? ` was ${dateText}` : ""}${tempText ? ` at ${tempText}` : ""}.`,
     );
   }
   if (shouldUseMetarFallback) {
     legendParts.push(
-      isEnglish(locale)
-        ? `Official ${observationTag} feed is sparse today, so the continuous observation line switches to ${metarFallbackTag}.`
-        : `今日官方 ${observationTag} 点位较稀疏，连续实测线改用 ${metarFallbackTag}。`,
+      `Official ${observationTag} feed is sparse today, so the continuous observation line switches to ${metarFallbackTag}.`,
     );
   }
   if (usingMirrorFallback) {
     legendParts.push(
-      isEnglish(locale)
-        ? "Dense observation feed matched the forecast curve exactly, so it was ignored for this chart refresh."
-        : "本次高密度观测源与预测曲线逐点重合，已忽略该异常源。",
+      "Dense observation feed matched the forecast curve exactly, so it was ignored for this chart refresh.",
     );
   } else if (observationCode === "hko") {
     legendParts.push(
-      isEnglish(locale)
-        ? "This city uses HKO official readings. The chart keeps official HKO points instead of switching to airport METAR."
-        : "该城市按 HKO 官方读数展示；图中保留 HKO 官方点位，不切换到机场 METAR 连续线。",
+      "This city uses HKO official readings. The chart keeps official HKO points instead of switching to airport METAR.",
     );
   } else if (observationCode === "noaa") {
     const noaaCode = getNoaaStationCode(detail);
     legendParts.push(
-      isEnglish(locale)
-        ? `This city settles on NOAA ${noaaCode} using the finalized highest rounded whole-degree Celsius Temp reading; the plotted line is a settlement reference.`
-        : `该城市按 NOAA ${noaaCode} 最终完成质控后的最高整度摄氏 Temp 读数结算；图中曲线仅作为结算参考线。`,
+      `This city settles on NOAA ${noaaCode} using the finalized highest rounded whole-degree Celsius Temp reading; the plotted line is a settlement reference.`,
     );
   }
   if (tafMarkers.length) {
     const primaryTafMarker = currentTafMarker || nextTafMarker;
     if (primaryTafMarker) {
-      legendParts.push(
-        isEnglish(locale)
-          ? `Current TAF: ${formatTafLegendMarker(primaryTafMarker)}`
-          : `当前 TAF：${formatTafLegendMarker(primaryTafMarker)}`,
-      );
+      legendParts.push(`Current TAF: ${formatTafLegendMarker(primaryTafMarker)}`);
     }
     if (peakWindowTafMarker && !sameMarker(peakWindowTafMarker, primaryTafMarker)) {
-      legendParts.push(
-        isEnglish(locale)
-          ? `Peak-window TAF: ${formatTafLegendMarker(peakWindowTafMarker)}`
-          : `峰值窗口 TAF：${formatTafLegendMarker(peakWindowTafMarker)}`,
-      );
+      legendParts.push(`Peak-window TAF: ${formatTafLegendMarker(peakWindowTafMarker)}`);
     }
-    legendParts.push(
-      isEnglish(locale)
-        ? "Use the current TAF segment as primary; peak-window segments are reference only."
-        : "以当前 TAF 时段为准，峰值窗口时段仅作参考。",
-    );
+    legendParts.push("Use the current TAF segment as primary; peak-window segments are reference only.");
   }
 
   const debPastSeries = buildSeriesPoints(times, debPast);
@@ -666,12 +623,8 @@ export function getTemperatureChartData(
     observationLabel:
     observationCode === "noaa" &&
     !shouldUseMetarFallback
-        ? isEnglish(locale)
-          ? `${observationDisplayTag} Settlement Reference`
-          : `${observationDisplayTag} 结算参考`
-        : isEnglish(locale)
-          ? `${observationDisplayTag} Observation`
-          : `${observationDisplayTag} 实况`,
+        ? `${observationDisplayTag} Settlement Reference`
+        : `${observationDisplayTag} Observation`,
     legendText: legendParts.join(" | "),
     max,
     min,

@@ -25,7 +25,7 @@ export function runTests() {
 
   assert(
     !source.includes("AI Overview") &&
-      !source.includes("AI 概览") &&
+      !source.includes("AI Overview") &&
       !source.includes("styles.badge"),
     "market overview banner should not render the AI overview badge",
   );

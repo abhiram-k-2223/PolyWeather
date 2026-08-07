@@ -31,7 +31,7 @@ export function AnalyticsFunnelChart({
         <YAxis type="category" dataKey="name" stroke="#cbd7e6" tick={{ fill: "#334155", fontSize: 13 }} width={130} />
         <Tooltip
           contentStyle={CHART_TOOLTIP_STYLE}
-          formatter={(value) => [`${value} 次`, "数量"]}
+          formatter={(value) => [`${value} times`, "Count"]}
         />
         <Bar dataKey="count" radius={[0, 6, 6, 0]}>
           {data.map((_, i) => (

@@ -33,16 +33,16 @@ const LABELS: Record<string, string> = {
   knmi: "KNMI (Amsterdam)",
   madis: "MADIS (NOAA)",
   telegram: "Telegram Bot",
-  jma: "JMA (日本)",
-  mgm: "MGM (土耳其)",
-  fmi: "FMI (芬兰)",
-  kma: "KMA (韩国)",
-  hko: "HKO (香港)",
+  jma: "JMA (Japan)",
+  mgm: "MGM (Turkey)",
+  fmi: "FMI (Finland)",
+  kma: "KMA (Korea)",
+  hko: "HKO (Hong Kong)",
   singapore_mss: "Singapore MSS",
-  cwa: "CWA (台湾)",
-  amos: "AMOS (韩国跑道)",
-  amsc_awos: "AMSC AWOS (中国)",
-  noaa_wrh: "NOAA WRH (美国结算)",
+  cwa: "CWA (Taiwan)",
+  amos: "AMOS (Korea Runway)",
+  amsc_awos: "AMSC AWOS (China)",
+  noaa_wrh: "NOAA WRH (US Settlement)",
 };
 
 function StatusIcon({ svc }: { svc: ServiceResult }) {
@@ -53,8 +53,8 @@ function StatusIcon({ svc }: { svc: ServiceResult }) {
 
 function StatusText({ svc }: { svc: ServiceResult }) {
   if (svc.ok) return <span className="text-xs text-emerald-400">{svc.latency_ms}ms</span>;
-  if (svc.error && svc.error.includes("not configured")) return <span className="text-xs text-slate-500">未配置</span>;
-  return <span className="text-xs text-red-400">{svc.error ?? "连接失败"}</span>;
+  if (svc.error && svc.error.includes("not configured")) return <span className="text-xs text-slate-500">Not Configured</span>;
+  return <span className="text-xs text-red-400">{svc.error ?? "Connection Failed"}</span>;
 }
 
 export function HealthPageClient() {
@@ -75,9 +75,9 @@ export function HealthPageClient() {
 
   useEffect(() => { void load(); }, []);
 
-  if (loading) return <div className="text-slate-400 animate-pulse">检测中...</div>;
-  if (error) return <div className="text-red-400">加载失败: {error}</div>;
-  if (!data) return <div className="text-slate-500">无数据</div>;
+  if (loading) return <div className="text-slate-400 animate-pulse">Checking...</div>;
+  if (error) return <div className="text-red-400">Load failed: {error}</div>;
+  if (!data) return <div className="text-slate-500">No Data</div>;
 
   const services = Object.entries(data.services);
   const okCount = services.filter(([, v]) => v.ok).length;
@@ -94,15 +94,15 @@ export function HealthPageClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">
-          API 状态{" "}
+          API Status{" "}
           <span className={data.ok ? "text-emerald-400" : "text-red-400"}>
-            {data.ok ? "全部正常" : `${okCount}/${services.length} 正常`}
+            {data.ok ? "All OK" : `${okCount}/${services.length} OK`}
           </span>
         </h1>
         <div className="flex gap-2 items-center">
           <span className="text-xs text-slate-500">{data.checked_at?.slice(11, 19) ?? ""}</span>
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-            <RefreshCcw className="h-3.5 w-3.5" /> 重新检测
+            <RefreshCcw className="h-3.5 w-3.5" /> Re-check
           </Button>
         </div>
       </div>
@@ -110,7 +110,7 @@ export function HealthPageClient() {
       {latencyData.length > 0 && (
         <Card className="border-slate-800 bg-slate-900/50">
           <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-white mb-4">服务响应延迟对比 (ms)</h3>
+            <h3 className="text-sm font-semibold text-white mb-4">Service Latency Comparison (ms)</h3>
             <HealthLatencyChart data={latencyData} />
           </CardContent>
         </Card>
@@ -131,9 +131,9 @@ export function HealthPageClient() {
               {(svc.credential_configured != null || svc.points != null || svc.observation_time_local) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
                   {svc.credential_configured != null && (
-                    <span>{svc.credential_configured ? "凭证已配置" : "凭证未配置"}</span>
+                    <span>{svc.credential_configured ? "Credential Configured" : "Credential Not Configured"}</span>
                   )}
-                  {svc.points != null && <span>跑道点 {svc.points}</span>}
+                  {svc.points != null && <span>Runway: {svc.points}</span>}
                   {svc.observation_time_local && <span>{svc.observation_time_local}</span>}
                 </div>
               )}

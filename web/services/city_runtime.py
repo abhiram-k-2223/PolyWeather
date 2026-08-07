@@ -35,25 +35,13 @@ from web.core import (
     CITIES,
     CITY_REGISTRY,  # noqa: F401 - compatibility export for tests and transitional routers
     CITY_RISK_PROFILES,  # noqa: F401 - compatibility export for tests and transitional routers
-    PAYMENT_CHECKOUT,  # noqa: F401 - compatibility export for tests and transitional routers
-    PaymentCheckoutError,  # noqa: F401 - compatibility export for tests and transitional routers
     SETTLEMENT_SOURCE_LABELS,  # noqa: F401 - compatibility export for city list payloads
     SUPABASE_ENTITLEMENT,  # noqa: F401 - compatibility export for tests and transitional routers
-    ConfirmPaymentTxRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    CreatePaymentIntentRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    GrantPointsRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    SubmitPaymentTxRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    WalletChallengeRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    WalletUnbindRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    WalletVerifyRequest,  # noqa: F401 - compatibility export for tests and transitional routers
-    _ENTITLEMENT_GUARD_ENABLED,  # noqa: F401 - compatibility export for tests and transitional routers
     _SUPABASE_AUTH_REQUIRED,  # noqa: F401 - compatibility export for tests and transitional routers
     _assert_entitlement,  # noqa: F401 - compatibility export for tests and transitional routers
     _bind_optional_supabase_identity,  # noqa: F401 - compatibility export for tests and transitional routers
     _require_ops_admin,  # noqa: F401 - compatibility export for tests and transitional routers
     _require_supabase_identity,  # noqa: F401 - compatibility export for tests and transitional routers
-    _resolve_auth_points,  # noqa: F401 - compatibility export for tests and transitional routers
-    _resolve_weekly_profile,  # noqa: F401 - compatibility export for tests and transitional routers
     _sf,
     _weather,
 )

@@ -120,17 +120,17 @@ function trustBadgeClass(tier?: string) {
 }
 
 function trustLabel(tier: string | undefined, isEn: boolean) {
-  if (tier === "high") return isEn ? "High" : "高";
-  if (tier === "medium") return isEn ? "Medium" : "中";
-  if (tier === "low") return isEn ? "Low" : "低";
-  return isEn ? "Thin" : "少";
+  if (tier === "high") return isEn ? "High" : "High";
+  if (tier === "medium") return isEn ? "Medium" : "Medium";
+  if (tier === "low") return isEn ? "Low" : "Low";
+  return isEn ? "Thin" : "Thin";
 }
 
 function recommendationLabel(value: string | undefined, isEn: boolean) {
-  if (value === "primary") return isEn ? "Primary" : "主用";
-  if (value === "supporting") return isEn ? "Support" : "辅助";
-  if (value === "context_only") return isEn ? "Context" : "参考";
-  return isEn ? "Insufficient" : "样本少";
+  if (value === "primary") return isEn ? "Primary" : "Primary";
+  if (value === "supporting") return isEn ? "Support" : "Support";
+  if (value === "context_only") return isEn ? "Context" : "Context";
+  return isEn ? "Insufficient" : "Insufficient";
 }
 
 const TRAINING_CACHE_KEY = "polyweather_training_accuracy_v1";
@@ -237,18 +237,18 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
   const debVersionRows = useMemo(() => {
     const versions = debSummary?.versions || {};
     return [
-      { key: "deb_v1_raw", label: isEn ? "Raw DEB" : "原始 DEB" },
-      { key: "deb_v1_recent_bias_corrected", label: isEn ? "Mean Bias" : "均值偏差" },
-      { key: "deb_v2_bucket_calibrated", label: isEn ? "Bucket v2" : "桶校准 v2" },
-      { key: "deb_v3_guarded_calibrated", label: isEn ? "Guarded v3" : "保护 v3" },
+      { key: "deb_v1_raw", label: isEn ? "Raw DEB" : "Raw DEB" },
+      { key: "deb_v1_recent_bias_corrected", label: isEn ? "Mean Bias" : "Mean Bias" },
+      { key: "deb_v2_bucket_calibrated", label: isEn ? "Bucket v2" : "Bucket v2" },
+      { key: "deb_v3_guarded_calibrated", label: isEn ? "Guarded v3" : "Guarded v3" },
     ].map(({ key, label }) => ({ key, label, value: versions[key] })).filter((row) => row.value);
   }, [debSummary?.versions, isEn]);
 
   const formatPct = (value: number | null | undefined) => value == null ? "--" : `${value.toFixed(1)}%`;
   const formatMaybeDeg = (value: number | null | undefined, digits = 1) => value == null ? "--" : `${value.toFixed(digits)}°`;
   const usableWindowLabel = (window?: string) => {
-    if (window === "recent_14d") return isEn ? "Usable 14d" : "可用近14天";
-    return isEn ? "Usable 7d" : "可用近7天";
+    if (window === "recent_14d") return isEn ? "Usable 14d" : "Usable 14d";
+    return isEn ? "Usable 7d" : "Usable 7d";
   };
 
   return (
@@ -256,12 +256,12 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
       <div className="p-4">
         <h1 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-1">
           <BarChart3 size={18} className="text-blue-600" />
-          {isEn ? "Model Training Accuracy" : "模型训练准确率"}
+          {isEn ? "Model Training Accuracy" : "Model Training Accuracy"}
         </h1>
         <p className="text-xs text-slate-500 mb-4">
           {isEn
             ? "DEB temperature forecast vs. Probability Mu calibration — per-city backtesting metrics."
-            : "DEB 气温预报 与 概率 μ 校准 — 各城市回测指标。"}
+            : "DEB temperature forecast vs. Probability Mu calibration — per-city backtesting metrics."}
         </p>
 
         {/* ── DEB Section ── */}
@@ -269,16 +269,16 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
           <>
             <h2 className="text-sm font-black text-slate-800 flex items-center gap-1.5 mb-2">
               <Thermometer size={14} className="text-amber-600" />
-              {isEn ? "DEB Temperature Forecast" : "DEB 气温预报"}
+              {isEn ? "DEB Temperature Forecast" : "DEB Temperature Forecast"}
             </h2>
             <div className="grid grid-cols-2 gap-2 mb-3 md:grid-cols-3 xl:grid-cols-6">
               {[
-                { icon: Hash, label: isEn ? "Cities" : "城市数", value: debStats.cities, tone: "blue" },
+                { icon: Hash, label: isEn ? "Cities" : "Cities", value: debStats.cities, tone: "blue" },
                 { icon: Target, label: usableWindowLabel(debStats.usableRecent?.window), value: formatPct(debStats.usableRecent?.hit_rate), tone: "emerald" },
-                { icon: TrendingUp, label: isEn ? "Recent 7d" : "近7天", value: formatPct(debSummary?.recent_7d?.hit_rate), tone: "emerald" },
-                { icon: TrendingUp, label: isEn ? "Recent 14d" : "近14天", value: formatPct(debSummary?.recent_14d?.hit_rate), tone: "purple" },
-                { icon: Thermometer, label: isEn ? "Avg Error" : "平均误差", value: `${debStats.avgMae.toFixed(1)}°`, tone: "amber" },
-                { icon: Hash, label: isEn ? "Samples" : "样本天数", value: (debStats.sampleDays ?? debStats.avgDays).toLocaleString(), tone: "blue" },
+                { icon: TrendingUp, label: isEn ? "Recent 7d" : "Recent 7d", value: formatPct(debSummary?.recent_7d?.hit_rate), tone: "emerald" },
+                { icon: TrendingUp, label: isEn ? "Recent 14d" : "Recent 14d", value: formatPct(debSummary?.recent_14d?.hit_rate), tone: "purple" },
+                { icon: Thermometer, label: isEn ? "Avg Error" : "Avg Error", value: `${debStats.avgMae.toFixed(1)}°`, tone: "amber" },
+                { icon: Hash, label: isEn ? "Samples" : "Samples", value: (debStats.sampleDays ?? debStats.avgDays).toLocaleString(), tone: "blue" },
               ].map(({ icon: Icon, label, value, tone }) => (
                 <div key={label} className={`flex items-center gap-3 rounded-lg border ${STAT_CARD_CLASSES[tone]} p-3`}>
                   <Icon size={20} className={STAT_ICON_CLASSES[tone]} />
@@ -300,8 +300,8 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
                         <span className="font-mono text-sm font-black text-slate-900">{formatPct(bucketRate)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>{isEn ? "MAE" : "误差"} {formatMaybeDeg(row.value?.mae, 2)}</span>
-                        <span>{isEn ? "Samples" : "样本"} {row.value?.samples ?? 0}</span>
+                        <span>{isEn ? "MAE" : "MAE"} {formatMaybeDeg(row.value?.mae, 2)}</span>
+                        <span>{isEn ? "Samples" : "Samples"} {row.value?.samples ?? 0}</span>
                       </div>
                     </div>
                   );
@@ -309,24 +309,24 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <ChartCard title={isEn ? "Usable Recent Hit Rate by City" : "可用近期命中率 by 城市"}>
+              <ChartCard title={isEn ? "Usable Recent Hit Rate by City" : "Usable Recent Hit Rate by City"}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={debHitChart} layout="vertical" margin={{ top: 0, right: 16, left: 48, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(v) => `${v}%`} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "#334155" }} width={52} />
-                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}%`, isEn ? "Hit Rate" : "命中率"]} />
+                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}%`, isEn ? "Hit Rate" : "Hit Rate"]} />
                     <Bar dataKey="value" radius={[0, 3, 3, 0]} fill="#2563eb" barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
-              <ChartCard title={isEn ? "Usable Recent Error by City (lower = better)" : "可用近期误差 by 城市（越低越好）"}>
+              <ChartCard title={isEn ? "Usable Recent Error by City (lower = better)" : "Usable Recent Error by City (lower = better)"}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={debMaeChart} layout="vertical" margin={{ top: 0, right: 16, left: 48, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(v) => `${v}°`} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "#334155" }} width={52} />
-                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}°`, isEn ? "Error" : "误差"]} />
+                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}°`, isEn ? "Error" : "Error"]} />
                     <Bar dataKey="value" radius={[0, 3, 3, 0]} fill="#7c3aed" barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -340,14 +340,14 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
           <>
             <h2 className="text-sm font-black text-slate-800 flex items-center gap-1.5 mb-2">
               <Crosshair size={14} className="text-emerald-600" />
-              {isEn ? "Probability Mu Calibration" : "概率 μ 校准"}
+              {isEn ? "Probability Mu Calibration" : "Probability Mu Calibration"}
             </h2>
             <div className="grid grid-cols-4 gap-2 mb-3">
               {[
-                { icon: Hash, label: isEn ? "Cities" : "城市数", value: muStats.cities, tone: "blue" },
-                { icon: Target, label: isEn ? "Avg Hit" : "平均命中", value: `${muStats.avgHit.toFixed(1)}%`, tone: "emerald" },
-                { icon: Thermometer, label: isEn ? "Avg Error" : "平均误差", value: `${muStats.avgMae.toFixed(2)}°`, tone: "amber" },
-                { icon: Crosshair, label: isEn ? "Avg Brier" : "平均 Brier", value: muStats.avgBrier.toFixed(4), tone: "purple" },
+                { icon: Hash, label: isEn ? "Cities" : "Cities", value: muStats.cities, tone: "blue" },
+                { icon: Target, label: isEn ? "Avg Hit" : "Avg Hit", value: `${muStats.avgHit.toFixed(1)}%`, tone: "emerald" },
+                { icon: Thermometer, label: isEn ? "Avg Error" : "Avg Error", value: `${muStats.avgMae.toFixed(2)}°`, tone: "amber" },
+                { icon: Crosshair, label: isEn ? "Avg Brier" : "Avg Brier", value: muStats.avgBrier.toFixed(4), tone: "purple" },
               ].map(({ icon: Icon, label, value, tone }) => (
                 <div key={label} className={`flex items-center gap-3 rounded-lg border ${STAT_CARD_CLASSES[tone]} p-3`}>
                   <Icon size={20} className={STAT_ICON_CLASSES[tone]} />
@@ -359,18 +359,18 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <ChartCard title={isEn ? "Prob Hit Rate by City" : "概率命中率 by 城市"}>
+              <ChartCard title={isEn ? "Prob Hit Rate by City" : "Prob Hit Rate by City"}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={muHitChart} layout="vertical" margin={{ top: 0, right: 16, left: 48, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(v) => `${v}%`} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "#334155" }} width={52} />
-                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}%`, isEn ? "Hit Rate" : "命中率"]} />
+                    <Tooltip contentStyle={{ borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: unknown) => [`${Number(v)}%`, isEn ? "Hit Rate" : "Hit Rate"]} />
                     <Bar dataKey="value" radius={[0, 3, 3, 0]} fill="#059669" barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartCard>
-              <ChartCard title={isEn ? "Brier Score by City (lower = better)" : "Brier 评分 by 城市（越低越好）"}>
+              <ChartCard title={isEn ? "Brier Score by City (lower = better)" : "Brier Score by City (lower = better)"}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={muBrierChart} layout="vertical" margin={{ top: 0, right: 16, left: 48, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
@@ -391,15 +391,14 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
             <thead>
               <tr className="border-b border-slate-200 bg-[#f8f9fa] text-left">
                 <th className="w-10 px-3 py-2 text-center text-[11px] font-black text-slate-400">#</th>
-                <th className="px-3 py-2 text-[11px] font-black uppercase text-slate-500">{isEn ? "City" : "城市"}</th>
-                <th className="px-2 py-2 text-left text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Trust" : "DEB 信任"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "7d" : "7天"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "14d" : "14天"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Hit" : "DEB 命中"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Error" : "DEB 误差"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "μ Hit" : "μ 命中"}</th>
-                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">Brier</th>
-                <th className="px-3 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "Days" : "天数"}</th>
+                <th className="px-3 py-2 text-[11px] font-black uppercase text-slate-500">{isEn ? "City" : "City"}</th>
+                <th className="px-2 py-2 text-left text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Trust" : "DEB Trust"}</th>
+                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "7d" : "7d"}</th>
+                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "14d" : "14d"}</th>
+                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Hit" : "DEB Hit"}</th>
+                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "DEB Error" : "DEB Error"}</th>
+                <th className="px-2 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "μ Hit" : "μ Hit"}</th>
+                <th className="px-3 py-2 text-right text-[11px] font-black uppercase text-slate-500">{isEn ? "Days" : "Days"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -462,7 +461,7 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
               ) : (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-slate-400">
-                    {data === null ? (isEn ? "Loading..." : "加载中...") : (isEn ? "No training data" : "暂无训练数据")}
+                    {data === null ? (isEn ? "Loading..." : "Loading...") : (isEn ? "No training data" : "No training data")}
                   </td>
                 </tr>
               )}
@@ -472,7 +471,7 @@ export function TrainingDashboard({ isEn }: { isEn: boolean }) {
         <p className="mt-3 text-center text-[11px] text-slate-400">
           {isEn
             ? "DEB = temperature forecast accuracy. μ = probability calibration. Brier = lower is better. Updated daily."
-            : "DEB = 气温预报准确率。μ = 概率校准。Brier = 越低越好。每日更新。"}
+            : "DEB = temperature forecast accuracy. μ = probability calibration. Brier = lower is better. Updated daily."}
         </p>
       </div>
     </div>

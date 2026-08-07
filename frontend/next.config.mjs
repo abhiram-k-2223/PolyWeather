@@ -31,7 +31,6 @@ const nextConfig = {
       "/docs/:path*",
       "/modern/:path*",
       "/probabilities/:path*",
-      "/subscription-help/:path*",
     ].map((source) => ({
       source,
       headers: publicPageHeaders,

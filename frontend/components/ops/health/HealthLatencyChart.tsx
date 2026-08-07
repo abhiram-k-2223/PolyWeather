@@ -22,7 +22,7 @@ export function HealthLatencyChart({
         <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.2)" tick={{ fill: "#94a3b8", fontSize: 11 }} width={120} />
         <Tooltip
           contentStyle={CHART_TOOLTIP_STYLE}
-          formatter={(value) => [`${value} ms`, "延迟"]}
+          formatter={(value) => [`${value} ms`, "Latency"]}
         />
         <Bar dataKey="latency" radius={[0, 4, 4, 0]}>
           {data.map((_, i) => (

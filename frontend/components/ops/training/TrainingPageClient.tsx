@@ -124,17 +124,17 @@ function debTrustBadgeClass(tier?: string) {
 }
 
 function debTrustLabel(tier?: string) {
-  if (tier === "high") return "高可信";
-  if (tier === "medium") return "中可信";
-  if (tier === "low") return "低可信";
-  return "样本少";
+  if (tier === "high") return "High Confidence";
+  if (tier === "medium") return "Medium Confidence";
+  if (tier === "low") return "Low Confidence";
+  return "Low Sample";
 }
 
 function debRecommendationLabel(recommendation?: string) {
-  if (recommendation === "primary") return "主用";
-  if (recommendation === "supporting") return "辅助";
-  if (recommendation === "context_only") return "仅参考";
-  return "不足";
+  if (recommendation === "primary") return "Primary";
+  if (recommendation === "supporting") return "Supporting";
+  if (recommendation === "context_only") return "Context Only";
+  return "Insufficient";
 }
 
 function formatPct(value: number | null | undefined) {
@@ -182,7 +182,7 @@ export function TrainingPageClient() {
   }, [accuracy, debSummary]);
 
   const usableWindowLabel = (window?: string) =>
-    window === "recent_14d" ? "DEB 可用近 14 天命中" : "DEB 可用近 7 天命中";
+    window === "recent_14d" ? "DEB Recent 14d Hit" : "DEB Recent 7d Hit";
 
   const debRecentRanked = useMemo(() => buildDebRecentRankingRows(accuracy || []), [accuracy]);
   const debRecentRankIndex = useMemo(
@@ -229,8 +229,8 @@ export function TrainingPageClient() {
     });
   }, [accuracy, debRecentRankIndex]);
 
-  if (loading) return <div className="text-slate-400 animate-pulse">加载中...</div>;
-  if (!status) return <div className="text-red-400">加载失败</div>;
+  if (loading) return <div className="text-slate-400 animate-pulse">Loading...</div>;
+  if (!status) return <div className="text-red-400">Load failed</div>;
 
   const td = status.training_data;
   const truth = td?.truth_records;
@@ -241,36 +241,36 @@ export function TrainingPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">训练数据</h1>
+        <h1 className="text-2xl font-bold text-white">Training Data</h1>
         <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-          <RefreshCcw className="h-3.5 w-3.5" /> 刷新
+          <RefreshCcw className="h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
 
       {/* Data volume KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
-          <CardHeader><CardTitle>真值记录</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Truth Records</CardTitle></CardHeader>
           <CardContent className="space-y-1">
-            <StatRow label="行数" value={truth?.row_count ?? "—"} />
-            <StatRow label="城市数" value={truth?.cities_count ?? "—"} />
-            <StatRow label="日期范围" value={truth?.min_date && truth?.max_date ? `${truth.min_date} ~ ${truth.max_date}` : "—"} />
+            <StatRow label="Rows" value={truth?.row_count ?? "—"} />
+            <StatRow label="Cities" value={truth?.cities_count ?? "—"} />
+            <StatRow label="Date Range" value={truth?.min_date && truth?.max_date ? `${truth.min_date} ~ ${truth.max_date}` : "—"} />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>训练特征</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Training Features</CardTitle></CardHeader>
           <CardContent className="space-y-1">
-            <StatRow label="行数" value={features?.row_count ?? "—"} />
-            <StatRow label="城市数" value={features?.cities_count ?? "—"} />
-            <StatRow label="日期范围" value={features?.min_date && features?.max_date ? `${features.min_date} ~ ${features.max_date}` : "—"} />
+            <StatRow label="Rows" value={features?.row_count ?? "—"} />
+            <StatRow label="Cities" value={features?.cities_count ?? "—"} />
+            <StatRow label="Date Range" value={features?.min_date && features?.max_date ? `${features.min_date} ~ ${features.max_date}` : "—"} />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>城市覆盖</CardTitle></CardHeader>
+          <CardHeader><CardTitle>City Coverage</CardTitle></CardHeader>
           <CardContent className="space-y-1">
-            <StatRow label="城市总数" value={coverage?.total_cities ?? "—"} />
-            <StatRow label="有真值" value={coverage?.with_truth_rows ?? "—"} />
-            <StatRow label="有特征" value={coverage?.with_feature_rows ?? "—"} />
+            <StatRow label="Total Cities" value={coverage?.total_cities ?? "—"} />
+            <StatRow label="Has Truth" value={coverage?.with_truth_rows ?? "—"} />
+            <StatRow label="Has Features" value={coverage?.with_feature_rows ?? "—"} />
           </CardContent>
         </Card>
       </div>
@@ -282,29 +282,29 @@ export function TrainingPageClient() {
             icon={Target} color="bg-cyan-500/20 text-cyan-400"
             label={usableWindowLabel(kpis.usableRecent?.window)}
             value={kpis.usableRecent?.hit_rate == null ? "—" : `${kpis.usableRecent.hit_rate.toFixed(1)}%`}
-            sub={`可用城市 ${kpis.usableRecent?.city_count ?? 0} · 样本 ${kpis.usableRecent?.samples ?? 0} · 历史 ${kpis.avgHit.toFixed(1)}%`}
+            sub={`Cities: ${kpis.usableRecent?.city_count ?? 0} · Samples: ${kpis.usableRecent?.samples ?? 0} · History: ${kpis.avgHit.toFixed(1)}%`}
           />
           <KpiCard
             icon={Target} color="bg-emerald-500/20 text-emerald-400"
-            label="近 7 天命中" value={kpis.recent7Hit == null ? "—" : `${kpis.recent7Hit.toFixed(1)}%`}
+            label="7d Hit" value={kpis.recent7Hit == null ? "—" : `${kpis.recent7Hit.toFixed(1)}%`}
           />
           <KpiCard
             icon={Activity} color="bg-violet-500/20 text-violet-400"
-            label="近 14 天命中" value={kpis.recent14Hit == null ? "—" : `${kpis.recent14Hit.toFixed(1)}%`}
+            label="14d Hit" value={kpis.recent14Hit == null ? "—" : `${kpis.recent14Hit.toFixed(1)}%`}
           />
           <KpiCard
             icon={Activity} color="bg-blue-500/20 text-blue-400"
-            label="DEB 平均 MAE" value={`${kpis.avgMae.toFixed(1)}°`}
+            label="Avg MAE" value={`${kpis.avgMae.toFixed(1)}°`}
           />
           <KpiCard
             icon={TrendingUp} color="bg-emerald-500/20 text-emerald-400"
-            label="最佳城市" value={kpis.best.name}
-            sub={`命中 ${kpis.best.deb?.hit_rate.toFixed(0)}% · MAE ${kpis.best.deb?.mae.toFixed(1)}°`}
+            label="Best City" value={kpis.best.name}
+            sub={`Hit ${kpis.best.deb?.hit_rate.toFixed(0)}% · MAE ${kpis.best.deb?.mae.toFixed(1)}°`}
           />
           <KpiCard
             icon={TrendingDown} color="bg-rose-500/20 text-rose-400"
-            label="最大偏差" value={kpis.worst.name}
-            sub={`MAE ${kpis.worst.deb?.mae.toFixed(1)}° · ${kpis.worst.deb?.total_days}天`}
+            label="Worst City" value={kpis.worst.name}
+            sub={`MAE ${kpis.worst.deb?.mae.toFixed(1)}° · ${kpis.worst.deb?.total_days}d`}
           />
         </div>
       ) : null}
@@ -315,22 +315,22 @@ export function TrainingPageClient() {
       {modelCities ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>最强城市</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Strongest Cities</CardTitle></CardHeader>
             <CardContent>
               {modelCities.strongest?.length ? (
                 <ul className="space-y-1">
                   {modelCities.strongest.map((c, i) => (
                     <li key={i} className="text-sm text-slate-300">
                       <span className="text-white font-medium">{c.city}</span>
-                      <span className="text-slate-500 ml-3">真值:{c.truth_rows ?? "—"} 特征:{c.feature_rows ?? "—"}</span>
+                      <span className="text-slate-500 ml-3">Truth:{c.truth_rows ?? "—"} Features:{c.feature_rows ?? "—"}</span>
                     </li>
                   ))}
                 </ul>
-              ) : <span className="text-slate-500 text-sm">无数据</span>}
+              ) : <span className="text-slate-500 text-sm">No Data</span>}
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>覆盖缺口</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Coverage Gaps</CardTitle></CardHeader>
             <CardContent>
               {modelCities.gaps?.length ? (
                 <div className="flex flex-wrap gap-1.5">
@@ -338,7 +338,7 @@ export function TrainingPageClient() {
                     <Badge key={c} variant="secondary">{c}</Badge>
                   ))}
                 </div>
-              ) : <span className="text-slate-500 text-sm">无缺口</span>}
+              ) : <span className="text-slate-500 text-sm">No gaps</span>}
             </CardContent>
           </Card>
         </div>
@@ -347,23 +347,23 @@ export function TrainingPageClient() {
       {/* Detail table */}
       <Card>
         <CardHeader>
-          <CardTitle>模型融合与预测准确率详情</CardTitle>
+          <CardTitle>Model Fusion & Accuracy Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-slate-300">
               <thead className="text-xs uppercase bg-slate-800/50 text-slate-400">
                 <tr>
-                  <th scope="col" className="px-4 py-3">城市</th>
-                  <th scope="col" className="px-4 py-3 text-center">DEB 策略</th>
-                  <th scope="col" className="px-4 py-3 text-center">近 7 / 14 天</th>
-                  <th scope="col" className="px-4 py-3 text-center">DEB 命中</th>
+                  <th scope="col" className="px-4 py-3">City</th>
+                  <th scope="col" className="px-4 py-3 text-center">DEB Strategy</th>
+                  <th scope="col" className="px-4 py-3 text-center">7d / 14d</th>
+                  <th scope="col" className="px-4 py-3 text-center">DEB Hit</th>
                   <th scope="col" className="px-4 py-3 text-center">DEB MAE</th>
-                  <th scope="col" className="px-4 py-3 text-center">DEB 天数</th>
-                  <th scope="col" className="px-4 py-3 text-center">μ 命中</th>
+                  <th scope="col" className="px-4 py-3 text-center">DEB Days</th>
+                  <th scope="col" className="px-4 py-3 text-center">μ Hit</th>
                   <th scope="col" className="px-4 py-3 text-center">μ MAE</th>
                   <th scope="col" className="px-4 py-3 text-center">Brier</th>
-                  <th scope="col" className="px-4 py-3 text-center">μ 天数</th>
+                  <th scope="col" className="px-4 py-3 text-center">μ Days</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -459,7 +459,7 @@ export function TrainingPageClient() {
                 ) : (
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
-                      无有效准确率记录
+                      No accuracy records
                     </td>
                   </tr>
                 )}
@@ -471,12 +471,12 @@ export function TrainingPageClient() {
 
       <Card>
         <CardHeader>
-          <CardTitle>真值历史浏览</CardTitle>
+          <CardTitle>Truth History</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-slate-400 mb-3">按城市和日期筛选查看历史真值记录。</p>
+          <p className="text-sm text-slate-400 mb-3">Filter by city and date to view historical Truth Records.</p>
           <Link href="/ops/truth-history" className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25 transition-colors">
-            打开真值历史 →
+            Open Truth History →
           </Link>
         </CardContent>
       </Card>

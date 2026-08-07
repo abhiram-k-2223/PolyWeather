@@ -163,7 +163,7 @@ export function runTests() {
 
   const settlementRunway = seriesByKey(series, "runway_02L_20R") as any;
   assert(settlementRunway, "settlement runway should use a stable runway-pair key");
-  assert(settlementRunway.label.includes("结算跑道"), "settlement runway should be labeled as settlement runway");
+  assert(settlementRunway.label.includes("Settlement Runway"), "settlement runway should be labeled as settlement runway");
   assert(settlementRunway.color === "#009688", "settlement runway should use the highlight cyan color");
   assert(settlementRunway.featured === true, "settlement runway should be featured");
   assert(!settlementRunway.dashed, "settlement runway should be solid");
@@ -481,7 +481,7 @@ export function runTests() {
     );
     const highlighted = seriesByKey(chart.series, runwayKey(settlementRwy)) as any;
     assert(highlighted, `${city} settlement runway should be present`);
-    assert(highlighted.label.includes("结算跑道"), `${city} settlement runway should be labeled`);
+    assert(highlighted.label.includes("Settlement Runway"), `${city} settlement runway should be labeled`);
     assert(highlighted.color === "#009688", `${city} settlement runway should use highlight cyan`);
     assert(highlighted.featured === true, `${city} settlement runway should be featured`);
     assert(!highlighted.dashed, `${city} settlement runway should be solid`);
@@ -602,7 +602,7 @@ export function runTests() {
       airportPrimary: {
         source_code: "cowin_obs",
         source_label: "CoWIN 6087",
-        station_label: "保良局陳守仁小學 1min (CoWIN)",
+        station_label: "PLK Chan Sau Yan Primary School 1min (CoWIN)",
         temp: 31.3,
         obs_time: "2026-05-27T02:42:00Z",
       },
@@ -757,7 +757,7 @@ export function runTests() {
   const busanRunway = seriesByKey(busanWithRunwayHistory.series, runwayKey("SR/SL")) as any;
   assert(busanRunway, "Busan SR/SL runway history should render as the runway curve");
   assert(busanRunway.featured === true, "Busan SR/SL should be treated as the settlement runway");
-  assert(busanRunway.label.includes("结算跑道"), "Busan SR/SL should be labeled as the settlement runway");
+  assert(busanRunway.label.includes("Settlement Runway"), "Busan SR/SL should be labeled as the settlement runway");
 
   const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
   let busanUtcPointLabel: string | null = null;
@@ -1141,11 +1141,11 @@ export function runTests() {
     null,
   );
   assert(
-    istanbulLabels.runwayHeaderLabel === "气象站实测",
+    istanbulLabels.runwayHeaderLabel === "Weather station live",
     "Istanbul/MGM should be labeled as weather-station observations, not runway observations",
   );
   assert(
-    istanbulLabels.runwayHighLabel === "气象站",
+    istanbulLabels.runwayHighLabel === "Weather station",
     "Istanbul/MGM high label should be weather station",
   );
 
@@ -1162,11 +1162,11 @@ export function runTests() {
     null,
   );
   assert(
-    panamaLabels.runwayHeaderLabel === "机场报文",
+    panamaLabels.runwayHeaderLabel === "Airport METAR",
     "Panama City/MPMG should be labeled as an airport METAR report when no station or runway sensor feed exists",
   );
   assert(
-    panamaLabels.runwayHighLabel === "机场报文",
+    panamaLabels.runwayHighLabel === "Airport METAR",
     "Panama City high label should use airport METAR report wording, not weather-station or runway wording",
   );
 
@@ -1189,7 +1189,7 @@ export function runTests() {
     } as any,
   );
   assert(
-    shanghaiLabels.runwayHeaderLabel === "跑道实测 (3分钟)",
+    shanghaiLabels.runwayHeaderLabel === "Runway live (3min)",
     "AMSC runway cities should advertise the 3-minute source cadence instead of the AMOS 1-minute cadence",
   );
 

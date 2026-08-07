@@ -1,55 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ArrowLeft, BookOpen, Menu } from "lucide-react";
 import styles from "./DocsLayout.module.css";
 import {
-  DocsLocale,
   DocsPage,
   DocsPageContent,
 } from "@/content/docs/docs";
 import { DOCS_GROUPS } from "@/content/docs/docs.config";
 import { DOCS_PAGES } from "@/content/docs/docs";
-import { useI18n } from "@/hooks/useI18n";
 
 function DocsHeader() {
-  const { locale, setLocale } = useI18n();
-
   return (
     <header className={styles.docsHeader}>
       <div className={styles.brandWrap}>
         <Link href="/" className={styles.brandLink}>
           PolyWeather
         </Link>
-        <span className={styles.brandSubtitle}>
-          {locale === "zh-CN" ? "产品文档中心" : "Product Documentation"}
-        </span>
+        <span className={styles.brandSubtitle}>Product Documentation</span>
       </div>
 
       <div className={styles.headerActions}>
         <Link href="/" className={styles.headerGhost}>
           <ArrowLeft size={16} aria-hidden="true" />
-          {locale === "zh-CN" ? "返回主站" : "Back to App"}
+          Back to App
         </Link>
-        <div className={styles.langSwitch} role="group" aria-label="Language switch">
-          <button
-            type="button"
-            className={clsx(styles.langButton, locale === "zh-CN" && styles.langButtonActive)}
-            onClick={() => setLocale("zh-CN")}
-          >
-            中文
-          </button>
-          <button
-            type="button"
-            className={clsx(styles.langButton, locale === "en-US" && styles.langButtonActive)}
-            onClick={() => setLocale("en-US")}
-          >
-            EN
-          </button>
-        </div>
       </div>
     </header>
   );
@@ -57,12 +35,10 @@ function DocsHeader() {
 
 function DocsSidebar({
   currentSlug,
-  locale,
   open,
   onClose,
 }: {
   currentSlug: string;
-  locale: DocsLocale;
   open: boolean;
   onClose: () => void;
 }) {
@@ -74,9 +50,9 @@ function DocsSidebar({
           const pages = DOCS_PAGES.filter((page) => page.group === group.id);
           return (
             <div key={group.id} className={styles.sidebarGroup}>
-              <div className={styles.sidebarTitle}>{group.title[locale]}</div>
+              <div className={styles.sidebarTitle}>{group.title}</div>
               {pages.map((page) => {
-                const title = page.content[locale].title;
+                const title = page.content.title;
                 const href = `/docs/${page.slug}`;
                 return (
                   <Link
@@ -98,10 +74,10 @@ function DocsSidebar({
   );
 }
 
-function DocsToc({ page, locale }: { page: DocsPageContent; locale: DocsLocale }) {
+function DocsToc({ page }: { page: DocsPageContent }) {
   return (
     <aside className={styles.toc}>
-      <div className={styles.tocTitle}>{locale === "zh-CN" ? "本页目录" : "On this page"}</div>
+      <div className={styles.tocTitle}>On this page</div>
       {page.sections.map((section) => (
         <a key={section.id} href={`#${section.id}`} className={styles.tocLink}>
           {section.title}
@@ -169,9 +145,8 @@ function BlockRenderer({ block }: { block: DocsPageContent["sections"][number]["
 
 export function DocsScreen({ page }: { page: DocsPage }) {
   const pathname = usePathname();
-  const { locale } = useI18n();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const localizedPage = useMemo(() => page.content[locale], [locale, page]);
+  const localizedPage = page.content;
   const currentSlug = pathname?.split("/").filter(Boolean).at(-1) || page.slug;
 
   return (
@@ -180,7 +155,6 @@ export function DocsScreen({ page }: { page: DocsPage }) {
       <div className={styles.docsFrame}>
         <DocsSidebar
           currentSlug={currentSlug}
-          locale={locale}
           open={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
         />
@@ -189,19 +163,19 @@ export function DocsScreen({ page }: { page: DocsPage }) {
           <div className={styles.contentInner}>
             <button type="button" className={clsx(styles.headerButton, styles.mobileMenuButton)} onClick={() => setMobileSidebarOpen(true)}>
               <Menu size={16} aria-hidden="true" />
-              {locale === "zh-CN" ? "目录" : "Contents"}
+              Contents
             </button>
             <div className={styles.pageIntro}>
               <div className={styles.introKicker}>
                 <BookOpen size={16} aria-hidden="true" />
-                {locale === "zh-CN" ? "PolyWeather 产品手册" : "PolyWeather Product Manual"}
+                PolyWeather Product Manual
               </div>
               <h1 className={styles.pageTitle}>{localizedPage.title}</h1>
               <p className={styles.pageDescription}>{localizedPage.description}</p>
-              <div className={styles.pageMeta} aria-label={locale === "zh-CN" ? "文档范围" : "Document scope"}>
-                <span>{locale === "zh-CN" ? "当前工作台" : "Current terminal"}</span>
-                <span>{locale === "zh-CN" ? `${DOCS_PAGES.length} 篇文档` : `${DOCS_PAGES.length} docs`}</span>
-                <span>{locale === "zh-CN" ? `${localizedPage.sections.length} 个章节` : `${localizedPage.sections.length} sections`}</span>
+              <div className={styles.pageMeta} aria-label="Document scope">
+                <span>Current terminal</span>
+                <span>{`${DOCS_PAGES.length} docs`}</span>
+                <span>{`${localizedPage.sections.length} sections`}</span>
               </div>
             </div>
             {localizedPage.sections.map((section) => (
@@ -215,7 +189,7 @@ export function DocsScreen({ page }: { page: DocsPage }) {
           </div>
         </main>
 
-        <DocsToc page={localizedPage} locale={locale} />
+        <DocsToc page={localizedPage} />
       </div>
     </div>
   );

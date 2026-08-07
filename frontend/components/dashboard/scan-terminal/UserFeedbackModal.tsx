@@ -28,9 +28,9 @@ const CATEGORY_OPTIONS: Array<{
   Icon: typeof Bug;
 }> = [
   { key: "bug", labelZh: "Bug", labelEn: "Bug", Icon: Bug },
-  { key: "data", labelZh: "数据问题", labelEn: "Data issue", Icon: MessageSquare },
-  { key: "idea", labelZh: "功能建议", labelEn: "Suggestion", Icon: Lightbulb },
-  { key: "payment", labelZh: "支付问题", labelEn: "Payment", Icon: WalletCards },
+  { key: "data", labelZh: "Data issue", labelEn: "Data issue", Icon: MessageSquare },
+  { key: "idea", labelZh: "Suggestion", labelEn: "Suggestion", Icon: Lightbulb },
+  { key: "payment", labelZh: "Payment", labelEn: "Payment", Icon: WalletCards },
 ];
 
 function buildRuntimeContext(extra: Record<string, unknown>) {
@@ -84,7 +84,7 @@ function formatFeedbackSubmitError(status: number, raw: string, isEn: boolean) {
   if (looksLikeHtmlDocument(raw)) {
     return isEn
       ? `Service is temporarily unavailable. Please retry in a moment. (HTTP ${status})`
-      : `服务暂时不可用，请稍后重试。（HTTP ${status}）`;
+      : `Service is temporarily unavailable. Please retry in a moment. (HTTP ${status})`;
   }
 
   const message = String(raw || "").replace(/\s+/g, " ").trim();
@@ -148,12 +148,12 @@ export function UserFeedbackModal({
 
   const contextPreview = useMemo(() => {
     const context = draft?.context || {};
-    const city = String(context.city || context.display_city || "").trim();
+      const city = String(context.city || context.display_city || "").trim();
     const source = String(draft?.source || context.source || "terminal").trim();
     if (city) {
-      return isEn ? `Context: ${city} · ${source}` : `上下文：${city} · ${source}`;
+      return isEn ? `Context: ${city} · ${source}` : `Context: ${city} · ${source}`;
     }
-    return isEn ? `Context: ${source}` : `上下文：${source}`;
+    return isEn ? `Context: ${source}` : `Context: ${source}`;
   }, [draft, isEn]);
 
   if (!open) return null;
@@ -199,7 +199,7 @@ export function UserFeedbackModal({
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <div>
             <div className="text-sm font-black text-slate-950">
-              {isEn ? "Send feedback" : "提交反馈"}
+              {isEn ? "Send feedback" : "Send feedback"}
             </div>
             <div className="mt-0.5 text-xs text-slate-500">{contextPreview}</div>
           </div>
@@ -207,7 +207,7 @@ export function UserFeedbackModal({
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 place-items-center rounded border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-            aria-label={isEn ? "Close feedback" : "关闭反馈"}
+            aria-label={isEn ? "Close feedback" : "Close feedback"}
           >
             <X size={16} />
           </button>
@@ -217,19 +217,19 @@ export function UserFeedbackModal({
           <div className="px-5 py-8 text-center">
             <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
             <div className="mt-3 text-sm font-black text-slate-950">
-              {isEn ? "Feedback received" : "反馈已收到"}
+              {isEn ? "Feedback received" : "Feedback received"}
             </div>
             <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-500">
               {isEn
                 ? "We saved the report with the current terminal context. The bell icon will show handling updates."
-                : "已附带当前终端上下文保存。右上角铃铛会显示后续处理进度。"}
+                : "We saved the report with the current terminal context. The bell icon will show handling updates."}
             </p>
             <button
               type="button"
               onClick={onClose}
               className="mt-5 rounded bg-blue-600 px-4 py-2 text-xs font-black text-white transition hover:bg-blue-700"
             >
-              {isEn ? "Done" : "完成"}
+              {isEn ? "Done" : "Done"}
             </button>
           </div>
         ) : (
@@ -255,7 +255,7 @@ export function UserFeedbackModal({
 
             <label className="block">
               <span className="text-xs font-bold text-slate-600">
-                {isEn ? "What happened?" : "问题或建议"}
+                {isEn ? "What happened?" : "What happened?"}
               </span>
               <textarea
                 value={message}
@@ -265,7 +265,7 @@ export function UserFeedbackModal({
                 placeholder={
                   isEn
                     ? "Example: This chart keeps loading after I switch to Helsinki."
-                    : "例如：切到 Helsinki 后图表一直加载。"
+                    : "Example: This chart keeps loading after I switch to Helsinki."
                 }
               />
             </label>
@@ -273,8 +273,8 @@ export function UserFeedbackModal({
             <label className="block">
               <span className="text-xs font-bold text-slate-600">
                 {loginEmailContact
-                  ? isEn ? "Contact (login email)" : "联系方式（登录邮箱）"
-                  : isEn ? "Contact, optional" : "联系方式，可选"}
+                  ? isEn ? "Contact (login email)" : "Contact (login email)"
+                  : isEn ? "Contact, optional" : "Contact, optional"}
               </span>
               <input
                 value={contact}
@@ -286,19 +286,19 @@ export function UserFeedbackModal({
                   "mt-1 h-9 w-full rounded border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100",
                   loginEmailContact ? "bg-slate-50 text-slate-600" : "bg-white",
                 )}
-                placeholder={isEn ? "Email or Telegram" : "邮箱或 Telegram"}
+                placeholder={isEn ? "Email or Telegram" : "Email or Telegram"}
               />
             </label>
 
             <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-4 text-slate-500">
               {isEn
                 ? "Terminal context is attached automatically: city, slot, source state, browser and session diagnostics."
-                : "会自动附带终端上下文：城市、槽位、数据源状态、浏览器和会话诊断信息。"}
+                : "Terminal context is attached automatically: city, slot, source state, browser and session diagnostics."}
             </div>
 
             {error && (
               <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {isEn ? "Submit failed: " : "提交失败："}{error}
+                {isEn ? "Submit failed: " : "Submit failed: "}{error}
               </div>
             )}
 
@@ -308,7 +308,7 @@ export function UserFeedbackModal({
                 onClick={onClose}
                 className="h-9 rounded border border-slate-200 px-4 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
               >
-                {isEn ? "Cancel" : "取消"}
+                {isEn ? "Cancel" : "Cancel"}
               </button>
               <button
                 type="button"
@@ -316,7 +316,7 @@ export function UserFeedbackModal({
                 disabled={!canSubmit}
                 className="h-9 rounded bg-blue-600 px-4 text-xs font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? (isEn ? "Sending..." : "提交中...") : (isEn ? "Send" : "提交")}
+                {submitting ? (isEn ? "Sending..." : "Sending...") : (isEn ? "Send" : "Send")}
               </button>
             </div>
           </div>

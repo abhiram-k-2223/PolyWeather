@@ -106,19 +106,19 @@ export function TruthHistoryDashboard() {
                   href="/ops"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/50 hover:text-white"
                 >
-                  返回 /ops
+                  Back to /ops
                 </Link>
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">真值历史浏览</h1>
+                <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Truth History</h1>
                 <p className="mt-2 max-w-3xl text-sm text-slate-400">
-                  面向后台运营/研究的历史真值表格页，支持按城市和日期范围过滤，直接查看最终 `actual_high` 与来源口径。
+                  Backend ops/research truth history table. Filter by city and date range; view actual_high and source details.
                 </p>
               </div>
             </div>
             <Button onClick={() => void load()} disabled={loading} className="gap-2">
               <RefreshCcw className="h-4 w-4" />
-              {loading ? "加载中" : "刷新"}
+              {loading ? "Loading" : "Refresh"}
             </Button>
           </div>
         </section>
@@ -126,29 +126,29 @@ export function TruthHistoryDashboard() {
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader>
-              <CardTitle>当前结果</CardTitle>
-              <CardDescription>本次筛选实际返回的记录条数。</CardDescription>
+              <CardTitle>Current Results</CardTitle>
+              <CardDescription>Records returned by current filter.</CardDescription>
             </CardHeader>
             <CardContent className="text-2xl font-black text-slate-100">{stats.rows}</CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>匹配总数</CardTitle>
-              <CardDescription>过滤后总命中条数，返回结果受 limit 限制。</CardDescription>
+              <CardTitle>Total Matches</CardTitle>
+              <CardDescription>Total matches after filtering; results limited by limit.</CardDescription>
             </CardHeader>
             <CardContent className="text-2xl font-black text-slate-100">{stats.filtered}</CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>覆盖城市</CardTitle>
-              <CardDescription>本次结果涉及的城市数量。</CardDescription>
+              <CardTitle>Covered Cities</CardTitle>
+              <CardDescription>Number of distinct cities in results.</CardDescription>
             </CardHeader>
             <CardContent className="text-2xl font-black text-slate-100">{stats.uniqueCities}</CardContent>
           </Card>
           <Card>
             <CardHeader>
               <CardTitle>Final Rows</CardTitle>
-              <CardDescription>当前返回里标记为最终真值的条数。</CardDescription>
+              <CardDescription>Rows marked as final truth.</CardDescription>
             </CardHeader>
             <CardContent className="text-2xl font-black text-slate-100">{stats.finalCount}</CardContent>
           </Card>
@@ -156,8 +156,8 @@ export function TruthHistoryDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>筛选器</CardTitle>
-            <CardDescription>按 city / date range 查历史真值。</CardDescription>
+            <CardTitle>Filters</CardTitle>
+            <CardDescription>Query truth history by city and date range.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_160px_auto]">
             <select
@@ -165,7 +165,7 @@ export function TruthHistoryDashboard() {
               onChange={(event) => setCity(event.target.value)}
               className="rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200"
             >
-              <option value="">全部城市</option>
+              <option value="">All Cities</option>
               {availableCities.map((item) => (
                 <option key={item.city} value={item.city}>
                   {item.name || item.city}
@@ -193,7 +193,7 @@ export function TruthHistoryDashboard() {
               className="rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200"
             />
             <Button onClick={() => void load()} disabled={loading}>
-              应用筛选
+              Apply
             </Button>
           </CardContent>
         </Card>
@@ -201,7 +201,7 @@ export function TruthHistoryDashboard() {
         {error ? (
           <Card className="border-rose-500/30 bg-rose-500/10">
             <CardHeader>
-              <CardTitle className="text-rose-300">加载失败</CardTitle>
+              <CardTitle className="text-rose-300">Load Failed</CardTitle>
               <CardDescription className="text-rose-200/80">{error}</CardDescription>
             </CardHeader>
           </Card>
@@ -209,9 +209,9 @@ export function TruthHistoryDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>历史真值表</CardTitle>
+            <CardTitle>History Table</CardTitle>
             <CardDescription>
-              字段包括 `actual_high`、`settlement_source`、`station_code`、`truth_version`、`updated_by`、`updated_at`。
+              Fields: actual_high, settlement_source, station_code, truth_version, updated_by, updated_at.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -254,7 +254,7 @@ export function TruthHistoryDashboard() {
                   {!items.length ? (
                     <tr>
                       <td className="px-4 py-4 text-slate-500" colSpan={8}>
-                        当前筛选条件下没有历史真值记录
+                        No truth records match the current filter.
                       </td>
                     </tr>
                   ) : null}

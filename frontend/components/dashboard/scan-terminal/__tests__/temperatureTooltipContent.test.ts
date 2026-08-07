@@ -36,7 +36,7 @@ export function runTests() {
     },
   ];
   const series = [
-    { key: "runway_35R_17L", label: "35R/17L 结算跑道", color: "#009688" },
+    { key: "runway_35R_17L", label: "35R/17L Settlement Runway", color: "#009688" },
     { key: "gfs", label: "GFS", color: "#10b981" },
     { key: "deb", label: "DEB Forecast", color: "#f97316" },
   ];

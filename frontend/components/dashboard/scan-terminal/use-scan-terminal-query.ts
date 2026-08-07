@@ -83,13 +83,9 @@ function applyTerminalPatches(
 }
 
 export function useScanTerminalQuery({
-  isPro,
-  proAccessLoading,
   timezoneOffsetSeconds,
   tradingRegion,
 }: {
-  isPro: boolean;
-  proAccessLoading: boolean;
   timezoneOffsetSeconds?: number | null;
   tradingRegion?: string;
 }) {
@@ -126,7 +122,6 @@ export function useScanTerminalQuery({
       forceRefresh?: boolean;
       showLoading?: boolean;
     } = {}) => {
-      if (proAccessLoading || !isPro) return;
       if (typeof fetch !== "function" || typeof AbortController === "undefined") {
         return;
       }
@@ -149,17 +144,12 @@ export function useScanTerminalQuery({
         },
       });
     },
-    [isPro, proAccessLoading, run, timezoneOffsetSeconds, tradingRegion],
+    [run, timezoneOffsetSeconds, tradingRegion],
   );
 
   useEffect(() => {
-    if (proAccessLoading) return;
-    if (!isPro) {
-      reset();
-      return;
-    }
     void fetchScanTerminal({ forceRefresh: false, showLoading: true });
-  }, [fetchScanTerminal, isPro, proAccessLoading, reset, timezoneOffsetSeconds, tradingRegion]);
+  }, [fetchScanTerminal, reset, timezoneOffsetSeconds, tradingRegion]);
 
   const effectiveData = useMemo(
     () => applyTerminalPatches(terminalData || cachedRows, getLatestPatchesSnapshot()),
@@ -180,7 +170,6 @@ export function useScanTerminalQuery({
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return;
-    if (proAccessLoading || !isPro) return;
 
     const handleForegroundScanRefresh = () => {
       if (document.visibilityState !== "visible") return;
@@ -204,11 +193,11 @@ export function useScanTerminalQuery({
       document.removeEventListener("visibilitychange", handleForegroundScanRefresh);
       window.removeEventListener("focus", handleForegroundScanRefresh);
     };
-  }, [fetchScanTerminal, isPro, proAccessLoading, scanRemote.status]);
+  }, [fetchScanTerminal, scanRemote.status]);
 
   // Preload adjacent regions in idle time for instant tab switches
   useEffect(() => {
-    if (typeof window === "undefined" || !tradingRegion || !isPro) return;
+    if (typeof window === "undefined" || !tradingRegion) return;
     const sorted = [...REGIONS].sort((a, b) => a.sort - b.sort);
     const idx = sorted.findIndex((r) => r.key === tradingRegion);
     if (idx < 0) return;
@@ -235,7 +224,7 @@ export function useScanTerminalQuery({
       const cancelFn = (window as any).cancelIdleCallback || clearTimeout;
       handles.forEach((h) => { try { cancelFn(h); } catch { /* */ } });
     };
-  }, [tradingRegion, isPro]);
+  }, [tradingRegion]);
 
   return {
     refreshScanTerminalManually,

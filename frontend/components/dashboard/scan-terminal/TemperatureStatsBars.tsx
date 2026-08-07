@@ -4,38 +4,47 @@ import clsx from "clsx";
 import { temp } from "@/components/dashboard/scan-terminal/utils";
 
 const OBSERVATION_LABEL_EN: Record<string, string> = {
-  "参考站点 (1分钟)": "Reference Station (1m)",
-  "天文台实测 (10分钟)": "HKO Live (10m)",
-  "机场气象站 (10分钟)": "Airport Weather Station (10m)",
-  "航站楼温度": "Terminal Temperature",
-  "官方机场观测 (15分钟)": "Official Airport Obs (15m)",
-  "CWA (10分钟)": "CWA (10m)",
-  "气象站实测": "Weather Station Live",
-  "跑道实测 (1分钟)": "Runway Live (1m)",
-  "跑道实测 (3分钟)": "Runway Live (3m)",
-  "机场报文": "Airport METAR",
-  "METAR 结算 (30分钟)": "METAR Settlement (30m)",
+  "Reference Station (1m)": "Reference Station (1m)",
+  "HKO Live (10m)": "HKO Live (10m)",
+  "Airport Weather Station (10m)": "Airport Weather Station (10m)",
+  "Terminal Temperature": "Terminal Temperature",
+  "Official Airport Obs (15m)": "Official Airport Obs (15m)",
+  "CWA (10m)": "CWA (10m)",
+  "Weather Station Live": "Weather Station Live",
+  "Runway Live (1m)": "Runway Live (1m)",
+  "Runway Live (3m)": "Runway Live (3m)",
+  "Airport METAR": "Airport METAR",
+  "METAR Settlement (30m)": "METAR Settlement (30m)",
 };
 
 const HIGH_LABEL_EN: Record<string, string> = {
-  "参考站点": "Reference Station",
-  "天文台实测": "HKO Live",
-  "天文台": "HKO",
-  "机场气象站": "Airport Weather Station",
-  "航站楼": "Terminal",
-  "官方机场观测": "Official Airport Obs",
-  "气象站": "Weather Station",
-  "跑道实测": "Runway",
-  "机场报文": "Airport METAR",
-  "METAR 官方": "Official METAR",
+  "Reference Station": "Reference Station",
+  "HKO Live": "HKO Live",
+  "HKO": "HKO",
+  "Airport Weather Station": "Airport Weather Station",
+  "Terminal": "Terminal",
+  "Official Airport Obs": "Official Airport Obs",
+  "Weather Station": "Weather Station",
+  "Runway": "Runway",
+  "Airport METAR": "Airport METAR",
+  "Official METAR": "Official METAR",
 };
 
+function canonicalLabel(label: string, map: Record<string, string>) {
+  if (!label) return label;
+  const normalized = label.toLowerCase();
+  const entry = Object.entries(map).find(
+    ([key]) => key.toLowerCase() === normalized || normalized.startsWith(`${key.toLowerCase()} `),
+  );
+  return entry ? entry[1] : label;
+}
+
 function observationLabel(label: string, isEn: boolean) {
-  return isEn ? (OBSERVATION_LABEL_EN[label] || label) : label;
+  return isEn ? canonicalLabel(label, OBSERVATION_LABEL_EN) : label;
 }
 
 function highLabel(label: string, isEn: boolean) {
-  return isEn ? (HIGH_LABEL_EN[label] || label) : label;
+  return isEn ? canonicalLabel(label, HIGH_LABEL_EN) : label;
 }
 
 type DebQuality = {
@@ -47,10 +56,10 @@ type DebQuality = {
 
 function debQualityLabel(quality: DebQuality | null | undefined, isEn: boolean) {
   const recommendation = quality?.recommendation;
-  if (recommendation === "primary") return isEn ? "Primary" : "主用";
-  if (recommendation === "supporting") return isEn ? "Support" : "辅助";
-  if (recommendation === "context_only") return isEn ? "Context" : "参考";
-  if (recommendation === "insufficient") return isEn ? "Thin" : "样本少";
+  if (recommendation === "primary") return isEn ? "Primary" : "Primary";
+  if (recommendation === "supporting") return isEn ? "Support" : "Support";
+  if (recommendation === "context_only") return isEn ? "Context" : "Context";
+  if (recommendation === "insufficient") return isEn ? "Thin" : "Thin";
   return "";
 }
 
@@ -68,7 +77,7 @@ function DebQualityBadge({ quality, isEn }: { quality?: DebQuality | null; isEn:
   const hitRate = quality?.recent_hit_rate;
   const samples = quality?.recent_samples;
   const titleParts = [
-    isEn ? `DEB recommendation: ${label}` : `DEB 建议：${label}`,
+    isEn ? `DEB recommendation: ${label}` : `DEB recommendation: ${label}`,
     hitRate == null ? null : `${hitRate.toFixed(0)}%`,
     samples == null ? null : `n=${samples}`,
   ].filter(Boolean);
@@ -99,12 +108,12 @@ function buildStatsLabels({
 }) {
   const primary = observationLabel(runwayHeaderLabel, isEn);
   const secondaryObservation = observationLabel(metarHeaderLabel, isEn);
-  const dailyHigh = isEn ? "Daily High" : "当日最高";
+  const dailyHigh = isEn ? "Daily High" : "Daily High";
   return {
     primary,
     compactSecondary: isShenzhen ? dailyHigh : secondaryObservation,
     expandedSecondary: `${secondaryObservation} · ${dailyHigh}`,
-    dailyPeakTitle: isEn ? "Daily Peak" : "当日最高气温",
+    dailyPeakTitle: isEn ? "Daily Peak" : "Daily Peak",
     runwayHigh: highLabel(runwayHighLabel, isEn),
     metarHigh: highLabel(metarHighLabel, isEn),
   };
@@ -191,7 +200,7 @@ export function TemperatureStatsBars({
               <>
                 <span className="text-slate-300">|</span>
                 <span className="font-semibold text-slate-500">
-                  {isEn ? "Models" : "多模型"}:{" "}
+                  {isEn ? "Models" : "Models"}:{" "}
                   <strong className="text-slate-700 font-mono">
                     {temp(modelMin, tempSymbol)} - {temp(modelMax, tempSymbol)}
                   </strong>
@@ -242,7 +251,7 @@ export function TemperatureStatsBars({
             </div>
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                {isEn ? "Model Range" : "多模型区间"}
+                {isEn ? "Model Range" : "Model Range"}
               </span>
               <span className="text-2xl font-bold font-mono text-slate-700 mt-1">
                 {modelMin !== null && modelMax !== null ? `${temp(modelMin, tempSymbol)} - ${temp(modelMax, tempSymbol)}` : "--"}
@@ -273,7 +282,7 @@ export function TemperatureStatsBars({
         <div className="grid grid-cols-4 gap-4 border-t border-slate-100 pt-3 text-xs font-mono text-slate-700 bg-slate-50/50 -mx-4 px-4 rounded-b-md">
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">
-              {isEn ? "Model Range" : "模型区间"}
+              {isEn ? "Model Range" : "Model Range"}
             </span>
             <strong className="text-slate-800 font-bold">
               {modelMin !== null && modelMax !== null ? `${temp(modelMin, tempSymbol)} - ${temp(modelMax, tempSymbol)}` : "--"}
@@ -290,16 +299,16 @@ export function TemperatureStatsBars({
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">
-              {isEn ? "Spread" : "分歧"}
+              {isEn ? "Spread" : "Spread"}
             </span>
-            <strong className={clsx("font-bold", spreadLabel === "高分歧" ? "text-amber-600" : "text-slate-600")}>
+            <strong className={clsx("font-bold", spreadLabel === "High" ? "text-amber-600" : "text-slate-600")}>
               {spread !== null ? `${spread.toFixed(1)}${tempSymbol}` : "--"}
               {spreadLabel && ` · ${isEn ? spreadLabelEn : spreadLabel}`}
             </strong>
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">
-              {isEn ? "Updated" : "更新时间"}
+              {isEn ? "Updated" : "Updated"}
             </span>
             <strong className="text-slate-800 font-bold">
               {formattedUpdateTime}

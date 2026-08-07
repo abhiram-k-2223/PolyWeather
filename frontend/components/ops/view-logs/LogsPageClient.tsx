@@ -26,7 +26,7 @@ export function LogsPageClient() {
         setError(await res.text().catch(() => "fetch failed"));
       }
     } catch {
-      setError("日志 API 尚未就绪（需要后端支持）");
+      setError("Logs API not ready (backend support needed)");
     }
   }, [level, limit]);
 
@@ -55,14 +55,14 @@ export function LogsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-white">日志查看</h1>
+        <h1 className="text-2xl font-bold text-white">Log Viewer</h1>
         <div className="flex gap-2 flex-wrap">
           <select
             value={level}
             onChange={(e) => setLevel(e.target.value)}
             className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
           >
-            <option value="">全部级别</option>
+            <option value="">All Levels</option>
             <option value="info">INFO</option>
             <option value="warning">WARNING</option>
             <option value="error">ERROR</option>
@@ -72,10 +72,10 @@ export function LogsPageClient() {
             onChange={(e) => setLimit(Number(e.target.value))}
             className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none"
           >
-            <option value="50">50 行</option>
-            <option value="100">100 行</option>
-            <option value="200">200 行</option>
-            <option value="500">500 行</option>
+            <option value="50">50 lines</option>
+            <option value="100">100 lines</option>
+            <option value="200">200 lines</option>
+            <option value="500">500 lines</option>
           </select>
           <Button
             variant="outline"
@@ -84,10 +84,10 @@ export function LogsPageClient() {
             className="gap-1.5"
           >
             {autoRefresh ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            {autoRefresh ? "暂停" : "自动刷新"}
+            {autoRefresh ? "Pause" : "Auto Refresh"}
           </Button>
           <Button variant="outline" size="sm" onClick={load} className="gap-1.5">
-            <RefreshCcw className="h-3.5 w-3.5" /> 刷新
+            <RefreshCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </div>
@@ -108,7 +108,7 @@ export function LogsPageClient() {
                   </div>
                 ))}
                 {lines.length === 0 && (
-                  <div className="p-6 text-center text-slate-500">暂无日志</div>
+                  <div className="p-6 text-center text-slate-500">No logs</div>
                 )}
               </div>
             </div>

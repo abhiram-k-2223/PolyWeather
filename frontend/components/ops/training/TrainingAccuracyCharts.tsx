@@ -68,7 +68,7 @@ export function TrainingAccuracyCharts({
       {debChartData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>DEB 可用近期命中率 by 城市</CardTitle></CardHeader>
+            <CardHeader><CardTitle>DEB usable recent hit rate by city</CardTitle></CardHeader>
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer>
@@ -78,7 +78,7 @@ export function TrainingAccuracyCharts({
                     <YAxis domain={[0, 100]} tick={{ fill: "#94a3b8", fontSize: 11 }} unit="%" />
                     <Tooltip
                       contentStyle={CHART_TOOLTIP_STYLE}
-                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}%`, "可用近期命中率"]}
+                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}%`, "usable recent hit rate"]}
                     />
                     <Bar dataKey="hitRate" radius={[4, 4, 0, 0]} maxBarSize={36}>
                       {debChartData.map((entry, i) => (
@@ -93,7 +93,7 @@ export function TrainingAccuracyCharts({
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>DEB 可用近期 MAE by 城市</CardTitle></CardHeader>
+            <CardHeader><CardTitle>DEB usable recent MAE by city</CardTitle></CardHeader>
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer>
@@ -103,7 +103,7 @@ export function TrainingAccuracyCharts({
                     <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} unit="°" />
                     <Tooltip
                       contentStyle={CHART_TOOLTIP_STYLE}
-                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}°`, "可用近期 MAE"]}
+                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}°`, "Recent MAE"]}
                     />
                     <Bar dataKey="mae" radius={[4, 4, 0, 0]} maxBarSize={36}>
                       {debChartData.map((entry, i) => (
@@ -122,7 +122,7 @@ export function TrainingAccuracyCharts({
       {muChartData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>概率 μ Brier Score by 城市</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Prob μ Brier Score by City</CardTitle></CardHeader>
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer>
@@ -147,7 +147,7 @@ export function TrainingAccuracyCharts({
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>概率 μ 命中率 by 城市</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Prob μ Hit Rate by City</CardTitle></CardHeader>
             <CardContent>
               <div className="h-[400px]">
                 <ResponsiveContainer>
@@ -157,7 +157,7 @@ export function TrainingAccuracyCharts({
                     <YAxis domain={[0, 100]} tick={{ fill: "#94a3b8", fontSize: 11 }} unit="%" />
                     <Tooltip
                       contentStyle={CHART_TOOLTIP_STYLE}
-                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}%`, "命中率"]}
+                      formatter={(value: unknown) => [`${Number(value).toFixed(1)}%`, "Hit Rate"]}
                     />
                     <Bar dataKey="hitRate" radius={[4, 4, 0, 0]} maxBarSize={36}>
                       {muChartData.map((entry, i) => (

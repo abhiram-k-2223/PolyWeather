@@ -64,14 +64,7 @@ def validate_runtime_env(
 
     auth_enabled = _env_bool("POLYWEATHER_AUTH_ENABLED", False)
     auth_required = _env_bool("POLYWEATHER_AUTH_REQUIRED", auth_enabled)
-    auth_require_subscription = _env_bool(
-        "POLYWEATHER_AUTH_REQUIRE_SUBSCRIPTION",
-        False,
-    )
     entitlement_guard = _env_bool("POLYWEATHER_REQUIRE_ENTITLEMENT", False)
-    payment_enabled = _env_bool("POLYWEATHER_PAYMENT_ENABLED", False)
-    weekly_reward_enabled = _env_bool("POLYWEATHER_WEEKLY_REWARD_ENABLED", False)
-    growth_reward_enabled = _env_bool("POLYWEATHER_GROWTH_REWARD_ENABLED", False)
 
     if component_key == "bot":
         missing = _missing(["TELEGRAM_BOT_TOKEN"])
@@ -86,38 +79,16 @@ def validate_runtime_env(
         missing = _missing(["SUPABASE_URL", "SUPABASE_ANON_KEY"])
         if missing:
             report.errors.append(f"已启用鉴权，但缺少变量: {', '.join(missing)}")
-        if (
-            auth_required
-            or auth_require_subscription
-            or weekly_reward_enabled
-            or growth_reward_enabled
-        ):
+        if auth_required:
             missing = _missing(["SUPABASE_SERVICE_ROLE_KEY"])
             if missing:
-                report.errors.append(f"当前鉴权/订阅能力需要变量: {', '.join(missing)}")
+                report.errors.append(f"当前鉴权能力需要变量: {', '.join(missing)}")
 
     if entitlement_guard:
         missing = _missing(["POLYWEATHER_BACKEND_ENTITLEMENT_TOKEN"])
         if missing:
             report.errors.append(
                 f"已启用 backend entitlement guard，但缺少变量: {', '.join(missing)}"
-            )
-
-    if payment_enabled:
-        has_payment_rpc = (
-            _has("POLYWEATHER_PAYMENT_RPC_URL")
-            or _has("POLYWEATHER_PAYMENT_RPC_URLS")
-            or _has("POLYWEATHER_PAYMENT_RPC_URLS_BY_CHAIN_JSON")
-        )
-        if not has_payment_rpc:
-            report.errors.append(
-                "已启用支付，但缺少变量: POLYWEATHER_PAYMENT_RPC_URL / POLYWEATHER_PAYMENT_RPC_URLS / POLYWEATHER_PAYMENT_RPC_URLS_BY_CHAIN_JSON"
-            )
-        has_receiver = _has("POLYWEATHER_PAYMENT_RECEIVER_CONTRACT")
-        has_tokens_json = _has("POLYWEATHER_PAYMENT_ACCEPTED_TOKENS_JSON")
-        if not (has_receiver or has_tokens_json):
-            report.errors.append(
-                "已启用支付，但未配置 POLYWEATHER_PAYMENT_RECEIVER_CONTRACT 或 POLYWEATHER_PAYMENT_ACCEPTED_TOKENS_JSON"
             )
 
 

@@ -311,8 +311,8 @@ class TestForecastBust:
         _, ai_context, sd = analyze_weather_trend(data, "°C", "test_city")
 
         # forecast_median=30, max_so_far=23 → miss = 7°C → heavy
-        assert "预报崩盘" in ai_context
-        assert "重" in ai_context or "级失准" in ai_context
+        assert "Forecast blowout" in ai_context
+        assert "severe" in ai_context or "miss" in ai_context
 
     @patch("src.analysis.trend_engine.calculate_dynamic_weights", return_value=(None, ""))
     @patch("src.analysis.trend_engine.get_deb_accuracy", return_value=None)
@@ -327,7 +327,7 @@ class TestForecastBust:
         )
         _, ai_context, _ = analyze_weather_trend(data, "°C", "test_city")
 
-        assert "预报崩盘" not in ai_context
+        assert "Forecast blowout" not in ai_context
 
 
 # ─── Tests: Trend Direction ───
@@ -388,10 +388,10 @@ class TestDynamicCommentary:
         summary = sd["dynamic_commentary"]["summary"]
         notes = sd["dynamic_commentary"]["notes"]
         assert summary
-        assert "云层明显增厚" in summary
-        assert "结构解读" in display_str
-        assert any("云层明显增厚" in note for note in notes)
-        assert "结构解读" in ai_context
+        assert "Clouds thickening" in summary
+        assert "Structure read" in display_str
+        assert any("Clouds thickening" in note for note in notes)
+        assert "Structure read" in ai_context
 
     @patch("src.analysis.trend_engine.calculate_dynamic_weights", return_value=(None, ""))
     @patch("src.analysis.trend_engine.get_deb_accuracy", return_value=None)
@@ -405,5 +405,5 @@ class TestDynamicCommentary:
 
         assert sd["dynamic_commentary"]["summary"] == ""
         assert sd["dynamic_commentary"]["notes"] == []
-        assert "结构解读" not in display_str
-        assert "结构解读" not in ai_context
+        assert "Structure read" not in display_str
+        assert "Structure read" not in ai_context

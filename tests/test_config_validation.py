@@ -19,13 +19,14 @@ def test_validate_runtime_env_web_auth_requires_supabase(monkeypatch):
     assert any("SUPABASE_URL" in err for err in report.errors)
 
 
-def test_validate_runtime_env_payment_requires_receiver_or_tokens(monkeypatch):
-    monkeypatch.setenv("POLYWEATHER_PAYMENT_ENABLED", "true")
-    monkeypatch.setenv("POLYWEATHER_PAYMENT_RPC_URL", "https://polygon-rpc.com")
-    monkeypatch.delenv("POLYWEATHER_PAYMENT_RECEIVER_CONTRACT", raising=False)
-    monkeypatch.delenv("POLYWEATHER_PAYMENT_ACCEPTED_TOKENS_JSON", raising=False)
+def test_validate_runtime_env_web_optional_auth_does_not_require_service_role(monkeypatch):
+    monkeypatch.setenv("POLYWEATHER_AUTH_ENABLED", "true")
+    monkeypatch.setenv("POLYWEATHER_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key")
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
     report = validate_runtime_env("web", load_env_file=False)
 
-    assert not report.ok
-    assert any("POLYWEATHER_PAYMENT_RECEIVER_CONTRACT" in err for err in report.errors)
+    assert report.ok
+    assert not any("SUPABASE_SERVICE_ROLE_KEY" in err for err in report.errors)

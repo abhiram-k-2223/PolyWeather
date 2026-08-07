@@ -13,32 +13,30 @@ function compactDate(value?: string) {
   return value.slice(0, 16).replace("T", " ");
 }
 
-function categoryLabel(value?: string, isEn = false) {
+function categoryLabel(value?: string) {
   const key = String(value || "").toLowerCase();
   if (key === "bug") return "Bug";
-  if (key === "data") return isEn ? "Data" : "数据";
-  if (key === "idea") return isEn ? "Suggestion" : "建议";
-  if (key === "payment") return isEn ? "Payment" : "支付";
-  if (key === "account") return isEn ? "Account" : "账号";
-  return isEn ? "Other" : "其他";
+  if (key === "data") return "Data";
+  if (key === "idea") return "Suggestion";
+  if (key === "payment") return "Payment";
+  if (key === "account") return "Account";
+  return "Other";
 }
 
-function formatRewardPoints(points?: number, isEn = false) {
+function formatRewardPoints(points?: number) {
   const raw = Number(points || 0);
   const value = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-  return isEn
-    ? `+${value.toLocaleString()} points`
-    : `+${value.toLocaleString()} 积分`;
+  return `+${value.toLocaleString()} points`;
 }
 
-function rewardStatusText(status?: string, isEn = false) {
+function rewardStatusText(status?: string) {
   const key = String(status || "").toLowerCase();
-  if (key === "pending") return isEn ? "Reward pending" : "奖励待处理";
-  if (key === "skipped") return isEn ? "No points awarded" : "未发放积分";
-  return isEn ? "Feedback reward" : "反馈奖励";
+  if (key === "pending") return "Reward pending";
+  if (key === "skipped") return "No points awarded";
+  return "Feedback reward";
 }
 
-function renderFeedbackReward(entry: UserFeedbackEntry, isEn: boolean) {
+function renderFeedbackReward(entry: UserFeedbackEntry) {
   const rawPoints = Number(entry.reward_points || 0);
   const points = Number.isFinite(rawPoints) ? Math.max(0, rawPoints) : 0;
   const rewardStatus = String(entry.reward_status || "").toLowerCase();
@@ -55,16 +53,16 @@ function renderFeedbackReward(entry: UserFeedbackEntry, isEn: boolean) {
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-bold">{rewardStatusText(rewardStatus, isEn)}</span>
+        <span className="font-bold">{rewardStatusText(rewardStatus)}</span>
         {points > 0 ? (
           <span className="font-mono font-black">
-            {formatRewardPoints(points, isEn)}
+            {formatRewardPoints(points)}
           </span>
         ) : null}
       </div>
       {reason ? (
         <div className="mt-1 leading-5 text-slate-600">
-          {isEn ? "Reason" : "奖励原因"}: {reason}
+          {"Reward reason"}: {reason}
         </div>
       ) : null}
       {entry.rewarded_at ? (
@@ -77,12 +75,10 @@ function renderFeedbackReward(entry: UserFeedbackEntry, isEn: boolean) {
 }
 
 export function AccountFeedbackPanel({
-  isEn,
   title,
   description,
   refreshLabel,
 }: {
-  isEn: boolean;
   title: string;
   description: string;
   refreshLabel: string;
@@ -126,9 +122,9 @@ export function AccountFeedbackPanel({
   }, [load]);
 
   const emptyText = useMemo(() => {
-    if (loading) return isEn ? "Loading feedback..." : "正在加载反馈...";
-    return isEn ? "No submitted feedback yet." : "暂无已提交反馈。";
-  }, [isEn, loading]);
+    if (loading) return "Loading feedback...";
+    return "No submitted feedback yet.";
+  }, [loading]);
 
   if (!available) return null;
 
@@ -155,7 +151,7 @@ export function AccountFeedbackPanel({
 
       {error && (
         <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          {isEn ? "Failed to load feedback: " : "反馈加载失败："}{error}
+          {"Failed to load feedback: "}{error}
         </div>
       )}
 
@@ -170,24 +166,24 @@ export function AccountFeedbackPanel({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded border px-2 py-0.5 text-[10px] font-black ${feedbackStatusTone(entry.status)}`}>
-                    {feedbackStatusLabel(entry.status, isEn)}
+                    {feedbackStatusLabel(entry.status)}
                   </span>
                   <span className="text-[11px] font-bold text-slate-500">
-                    {categoryLabel(entry.category, isEn)}
+                    {categoryLabel(entry.category)}
                   </span>
                   <span className="text-[11px] text-slate-400">
                     {compactDate(entry.created_at)}
                   </span>
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-slate-900">
-                  {entry.message || (isEn ? "Feedback" : "反馈")}
+                  {entry.message || "Feedback"}
                 </p>
-                {renderFeedbackReward(entry, isEn)}
+                {renderFeedbackReward(entry)}
               </div>
               <div className="text-xs text-slate-500 md:text-right">
                 <div className="font-mono">{compactDate(entry.updated_at)}</div>
                 <div className="mt-1 text-[11px] text-slate-400">
-                  {isEn ? "Updated" : "最近更新"}
+                  {"Updated"}
                 </div>
               </div>
             </div>

@@ -25,12 +25,12 @@ export function runTests() {
     "ops feedback action column must use a status dropdown",
   );
   assert(
-    !source.includes("标为{feedbackActionLabel(row.status)}") &&
+    !source.includes("Mark as {feedbackActionLabel(row.status)}") &&
       !source.includes("advanceStatus(row)"),
     "ops feedback action column must not use one-step status buttons",
   );
   assert(
-    source.includes("积分奖励标准") &&
+    source.includes("Points reward standard") &&
       source.includes("REWARD_GUIDELINES") &&
       source.includes("100") &&
       source.includes("300") &&

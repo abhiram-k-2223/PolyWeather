@@ -23,12 +23,12 @@ const COVERAGE_EN = [
 ];
 
 const COVERAGE_ZH = [
-  "AMOS 60s 跑道传感器",
-  "AMSC 180s 跑道端点",
-  "MADIS 300s 机场观测",
+  "AMOS 60s runway sensors",
+  "AMSC 180s runway endpoints",
+  "MADIS 300s airport observations",
   "CoWIN 60s + HKO 600s",
-  "网页图表实时更新",
-  "Telegram 简短提醒",
+  "Live chart updates",
+  "Short Telegram alerts",
 ];
 
 const PRO_FEATURES_EN = [
@@ -36,17 +36,17 @@ const PRO_FEATURES_EN = [
   "DEB blend forecast with model-spread context",
   "Model-implied distribution and probability estimates",
   "Intraday windows, deviation metrics, and settlement context",
-  "Paid Telegram group eligibility and alert workflows",
-  "Priority support for subscription and access issues",
+  "Telegram alert workflows and push notifications",
+  "Open to all users without a subscription",
 ];
 
 const PRO_FEATURES_ZH = [
-  "结算源优先的机场、官方站与跑道实测",
-  "DEB 智能融合预报与模型分歧背景",
-  "模型隐含分布预测与概率估算",
-  "日内观测窗口、偏差度量与结算背景",
-  "付费 Telegram 群准入与提醒工作流",
-  "订阅与准入问题优先支持",
+  "Settlement-source-first airport, official-station, and runway observations",
+  "DEB blend forecast with model-spread context",
+  "Model-implied distribution and probability estimates",
+  "Intraday windows, deviation metrics, and settlement context",
+  "Telegram alert workflows and push notifications",
+  "Open to all users without a subscription",
 ];
 
 const CONTACT_EMAIL = "yhrsc30@gmail.com";
@@ -61,23 +61,23 @@ const SUPPORTED_CITY_GROUPS: Array<{
 }> = [
   {
     labelEn: "Asia-Pacific",
-    labelZh: "亚太",
+    labelZh: "Asia-Pacific",
     descriptionEn: "China, East Asia, Southeast Asia, South Asia, and Oceania markets.",
-    descriptionZh: "中国、东亚、东南亚、南亚与大洋洲市场。",
+    descriptionZh: "China, East Asia, Southeast Asia, South Asia, and Oceania markets.",
     include: (city) => city.lon >= 60 || city.lon <= -170,
   },
   {
     labelEn: "Europe / Middle East / Africa",
-    labelZh: "欧洲 / 中东 / 非洲",
+    labelZh: "Europe / Middle East / Africa",
     descriptionEn: "Airport and official-station markets across EMEA.",
-    descriptionZh: "覆盖欧洲、中东和非洲的机场与官方站市场。",
+    descriptionZh: "Airport and official-station markets across EMEA.",
     include: (city) => city.lon > -30 && city.lon < 60,
   },
   {
     labelEn: "Americas",
-    labelZh: "美洲",
+    labelZh: "Americas",
     descriptionEn: "North and South American temperature markets.",
-    descriptionZh: "北美与南美温度市场。",
+    descriptionZh: "North and South American temperature markets.",
     include: (city) => city.lon >= -170 && city.lon <= -30,
   },
 ];
@@ -259,40 +259,40 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
         },
         {
           icon: "shield",
-          title: "Access Control",
-          body: "Trial users get the same product experience as Pro, except the paid Telegram group link stays hidden.",
+          title: "Open Access",
+          body: "The full terminal, chart guides, and alert workflow are available without a subscription or payment.",
         },
       ]
     : [
         {
           icon: "radar",
-          title: "实况证据",
-          body: "机场观测、模型分歧与偏差校验放在一个安静清晰的工作台里。",
+          title: "Live Evidence",
+          body: "Airport observations, model spreads, and deviation checks stay in one calm workspace.",
         },
         {
           icon: "gauge",
-          title: "每日复盘",
-          body: "快速扫描城市面板、比较预报路径，并保留当前判断上下文。",
+          title: "Daily Review",
+          body: "Scan the city board, compare forecasts, and keep the current decision context visible.",
         },
         {
           icon: "shield",
-          title: "权益分层",
-          body: "试用期权益和 Pro 一致，唯一例外是不显示付费 Telegram 群链接。",
+          title: "Open Access",
+          body: "The full terminal, chart guides, and alert workflow are available without a subscription or payment.",
         },
       ];
 
   const heroStats = isEn
     ? [
-        { label: "Trial", value: "3 days" },
-        { label: "Monthly", value: "29.9 USDC" },
-        { label: "Quarterly", value: "79.9 USDC" },
-        { label: "Referral", value: "20 USDC" },
+        { label: "Cities", value: "40+" },
+        { label: "Sources", value: "40+" },
+        { label: "Refresh", value: "Real-time" },
+        { label: "Access", value: "Free" },
       ]
     : [
-        { label: "试用", value: "3 天" },
-        { label: "月付", value: "29.9 USDC" },
-        { label: "季度", value: "79.9 USDC" },
-        { label: "邀请首月", value: "20 USDC" },
+        { label: "Cities", value: "40+" },
+        { label: "Sources", value: "40+" },
+        { label: "Refresh", value: "Real-time" },
+        { label: "Access", value: "Free" },
       ];
 
   return (
@@ -309,25 +309,25 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-500 lg:flex">
             <a href="#platform" className="hover:text-slate-950">
-              {isEn ? "Platform" : "平台"}
+              {isEn ? "Platform" : "Platform"}
             </a>
             <a href="#coverage" className="hover:text-slate-950">
-              {isEn ? "Data" : "数据"}
+              {isEn ? "Data" : "Data"}
             </a>
             <a href="#screenshots" className="hover:text-slate-950">
-              {isEn ? "Screens" : "截图"}
+              {isEn ? "Screens" : "Screens"}
             </a>
             <a href="#supported-cities" className="hover:text-slate-950">
-              {isEn ? "Cities" : "城市"}
+              {isEn ? "Cities" : "Cities"}
             </a>
             <Link href="/docs/chart-guide" className="hover:text-slate-950">
-              {isEn ? "Guide" : "读图"}
+              {isEn ? "Guide" : "Guide"}
             </Link>
             <a href="#pricing" className="hover:text-slate-950">
-              {isEn ? "Pricing" : "定价"}
+              {isEn ? "Pricing" : "Pricing"}
             </a>
             <a href="#contact" className="hover:text-slate-950">
-              {isEn ? "Contact" : "联系"}
+              {isEn ? "Contact" : "Contact"}
             </a>
           </nav>
 
@@ -345,16 +345,16 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
               </h1>
               <p className="landing-rise landing-delay-1 mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
                 {isEn
-                  ? "A settlement-source-first terminal for temperature markets: live airport/runway observations, DEB, market buckets, and alerts in one workflow."
-                  : "面向温度市场的结算源优先终端：机场/跑道实测、DEB、市场温度桶和提醒放在同一个工作流里。"}
+                  ? "A settlement-source-first terminal for temperature markets: live airport/runway observations, DEB, market buckets, and alerts in one workflow. Settlement-source priority is our differentiated selling point over generic forecast feeds."
+                  : "A settlement-source-first terminal for temperature markets: live airport/runway observations, DEB, market buckets, and alerts in one workflow. Settlement-source priority is our Differentiated selling point over generic forecast feeds."}
               </p>
               <div className="landing-rise landing-delay-2">
                 <LandingHeroActions locale={locale} />
               </div>
               <p className="landing-rise landing-delay-3 mt-4 text-sm text-slate-500">
                 {isEn
-                  ? "Start with a one-time 3-day trial. Trial access matches Pro except for the paid Telegram group link."
-                  : "新用户可先领一次 3 天试用。试用期权益和 Pro 一致，除了不显示付费 Telegram 群链接。"}
+                  ? "Free to use — no trial window, no subscription, no payment required."
+                  : "Free to use — no trial window, no subscription, no payment required."}
               </p>
             </div>
 
@@ -372,7 +372,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                   src="/static/web.webp"
                   width="680"
                   height="340"
-                  alt={isEn ? "PolyWeather terminal preview" : "PolyWeather 终端预览"}
+                  alt={isEn ? "PolyWeather terminal preview" : "PolyWeather Terminal Preview"}
                   className="h-full w-full object-cover object-top"
                   decoding="async"
                   fetchPriority="high"
@@ -402,12 +402,12 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
           <div className="mx-auto max-w-6xl">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                {isEn ? "Platform" : "平台能力"}
+                {isEn ? "Platform" : "Platform"}
               </p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                 {isEn
                   ? "Built around the station that actually matters."
-                  : "围绕真正会影响结算的站点构建。"}
+                  : "Built around the station that actually matters."}
               </h2>
             </div>
 
@@ -427,15 +427,15 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
               <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                    {isEn ? "Differentiation" : "差异化卖点"}
+                    {isEn ? "Differentiation" : "Differentiation"}
                   </p>
                   <h3 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
-                    {isEn ? "Settlement-source first, not generic weather." : "结算源优先，不做泛天气看板。"}
+                    {isEn ? "Settlement-source first, not generic weather." : "Settlement-source first, not generic weather."}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
                     {isEn
                       ? "The product is built around the station, runway, and update cadence that affect settlement, then layers DEB, market buckets, and alerting on top."
-                      : "产品围绕真正影响结算的站点、跑道和源头频率构建，再叠加 DEB、市场温度桶和提醒工作流。"}
+                      : "The product is built around the station, runway, and update cadence that affect settlement, then layers DEB, market buckets, and alerting on top."}
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -447,10 +447,10 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                         "Telegram sends concise alerts without noisy refresh loops",
                       ]
                     : [
-                        "中国和韩国跑道级实测上下文",
-                        "香港 CoWIN + HKO 双源读数",
-                        "源头有新读数时，网页自动补上变化",
-                        "Telegram 只发简短提醒，避免噪音刷屏",
+                        "Runway-level China and Korea observation context",
+                        "Hong Kong CoWIN + HKO dual-source reading",
+                        "Live pages update as new source readings arrive",
+                        "Telegram sends concise alerts without noisy refresh loops",
                       ]
                   ).map((item) => (
                     <div key={item} className="landing-hover-lift rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-semibold leading-6 text-slate-700">
@@ -467,15 +467,15 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
           <div className="mx-auto max-w-6xl">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                {isEn ? "Product Screenshots" : "产品截图"}
+                {isEn ? "Product Screenshots" : "Product Screenshots"}
               </p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                {isEn ? "The terminal and alerts are the product." : "终端和提醒就是核心产品。"}
+                {isEn ? "The terminal and alerts are the product." : "The terminal and alerts are the product."}
               </h2>
               <p className="mt-4 text-sm leading-7 text-slate-600">
                 {isEn
                   ? "See what you will use before subscribing: a browser terminal for live temperature evidence, plus short Telegram alerts when runway or settlement signals change."
-                  : "订阅前先看清你会用到什么：网页上看实时温度证据；跑道或结算源有变化时，在 Telegram 收到简短提醒。"}
+                  : "See what you will use before subscribing: a browser terminal for live temperature evidence, plus short Telegram alerts when runway or settlement signals change."}
               </p>
             </div>
 
@@ -486,7 +486,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                     src="/static/web.webp"
                     width="680"
                     height="340"
-                    alt={isEn ? "Realtime terminal screenshot" : "实时终端截图"}
+                    alt={isEn ? "Realtime terminal screenshot" : "Realtime terminal screenshot"}
                     className="h-full w-full object-cover object-top transition duration-500 hover:scale-[1.015]"
                     decoding="async"
                     loading="lazy"
@@ -494,7 +494,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                   />
                 </div>
                 <figcaption className="px-2 py-3 text-xs font-semibold text-slate-500">
-                  {isEn ? "Browser terminal: settlement observations, DEB, source cadence, and market context." : "浏览器终端：结算实测、DEB、源头频率和市场上下文。"}
+                  {isEn ? "Browser terminal: settlement observations, DEB, source cadence, and market context." : "Browser terminal: settlement observations, DEB, source cadence, and market context."}
                 </figcaption>
               </figure>
 
@@ -504,7 +504,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                     src="/static/tel.png"
                     width="420"
                     height="640"
-                    alt={isEn ? "Telegram runway alert screenshot" : "Telegram 跑道提醒截图"}
+                    alt={isEn ? "Telegram runway alert screenshot" : "Telegram runway alert screenshot"}
                     className="h-full w-full object-cover object-top transition duration-500 hover:scale-[1.015]"
                     decoding="async"
                     loading="lazy"
@@ -512,7 +512,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                   />
                 </div>
                 <figcaption className="px-2 py-3 text-xs font-semibold text-slate-500">
-                  {isEn ? "Telegram alerts: concise runway and settlement-source updates for paid users." : "Telegram 提醒：为付费用户提供简洁的跑道与结算源更新。"}
+                  {isEn ? "Telegram alerts: concise runway and settlement-source updates for paid users." : "Telegram alerts: concise runway and settlement-source updates for paid users."}
                 </figcaption>
               </figure>
             </div>
@@ -523,28 +523,28 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
           <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                {isEn ? "Data Coverage" : "数据覆盖"}
+                {isEn ? "Data Coverage" : "Data Coverage"}
               </p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                {isEn ? "Refresh cadence follows the source, not a fake timer." : "刷新频率跟随源头，不伪装成统一定时器。"}
+                {isEn ? "Refresh cadence follows the source, not a fake timer." : "Refresh cadence follows the source, not a fake timer."}
               </h2>
               <p className="mt-4 text-sm leading-7 text-slate-600">
                 {isEn
                   ? "PolyWeather follows each source's real update rhythm. The website refreshes the visible charts as new readings arrive, while Telegram keeps alerts short and readable."
-                  : "PolyWeather 跟随每个数据源自己的更新节奏。网页图表会补上最新读数，Telegram 只保留短提醒，让你快速知道哪里变了。"}
+                  : "PolyWeather follows each source's real update rhythm. The website refreshes the visible charts as new readings arrive, while Telegram keeps alerts short and readable."}
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link
                   href="/docs/chart-guide"
                   className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
                 >
-                  {isEn ? "Read chart guide" : "查看读图指南"}
+                  {isEn ? "Read chart guide" : "Read Chart Guide"}
                 </Link>
                 <Link
                   href="/docs/realtime-sources"
                   className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
                 >
-                  {isEn ? "Source cadence" : "数据源频率"}
+                  {isEn ? "Source cadence" : "Source Cadence"}
                 </Link>
               </div>
             </div>
@@ -575,77 +575,52 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
           <div className="mx-auto max-w-6xl">
             <div className="mx-auto max-w-2xl text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                {isEn ? "Pricing" : "定价"}
+                {isEn ? "Access" : "Access"}
               </p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                 {isEn
-                  ? "Try first, upgrade when it becomes part of your workflow."
-                  : "先试用，确认进入工作流后再开通 Pro。"}
+                  ? "Free to use, no subscription required."
+                  : "Free to use, no subscription required."}
               </h2>
               <p className="mt-4 text-base leading-8 text-slate-600">
                 {isEn
-                  ? "New users receive one 3-day trial. Monthly and quarterly Pro unlock the full entitlement set."
-                  : "新用户可领取一次 3 天试用，月付与季度 Pro 解锁完整权益。"}
+                  ? "The terminal, real-time observations, chart guides, and Telegram alerts are open to everyone. Sign in with your account to use the full workflow."
+                  : "The terminal, real-time observations, chart guides, and Telegram alerts are open to everyone. Sign in with your account to use the full workflow."}
               </p>
             </div>
 
-            <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="flex flex-col rounded-lg border border-slate-200 bg-[#fbfbfa] p-6 shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
                   <LandingIcon name="clock" />
-                  {isEn ? "Trial" : "试用"}
+                  Real-time
                 </div>
                 <h3 className="mt-5 text-2xl font-black text-slate-950">
-                  {isEn ? "3-day free trial" : "3 天免费试用"}
+                  {isEn ? "Live observations" : "Live Observations"}
                 </h3>
                 <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
                   {isEn
-                    ? "Automatically granted once after signup. Trial access matches Pro, except trial accounts do not see the paid Telegram group link."
-                    : "注册后自动开通一次，体验核心产品；试用期权益和 Pro 一致，除了不显示付费 Telegram 群链接。"}
+                    ? "Airport METAR, runway sensors, and model-blended forecasts update on the data source's native cadence."
+                    : "Airport METAR, runway sensors, and model-blended forecasts update on the data source's native cadence."}
                 </p>
-                <Link
-                  href="/auth/login?next=%2Fterminal&mode=signup"
-                  className="mt-8 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
-                >
-                  {isEn ? "Start trial" : "开始试用"}
-                  <LandingIcon name="arrow" size={15} />
-                </Link>
               </div>
 
               <div className="relative flex flex-col rounded-lg border-2 border-slate-950 bg-white p-6 shadow-[8px_8px_0_rgba(15,23,42,0.12)]">
                 <div className="absolute right-4 top-4 rounded-md bg-[#fff3b0] px-2 py-1 text-xs font-black text-slate-900">
-                  {isEn ? "Popular" : "常用"}
+                  {isEn ? "Free" : "Free"}
                 </div>
                 <div className="flex items-center gap-2 text-sm font-bold text-sky-700">
-                  <LandingIcon name="database" />
-                  Pro
+                  <LandingIcon name="shield" />
+                  Open
                 </div>
                 <h3 className="mt-5 text-2xl font-black text-slate-950">
-                  Pro
+                  {isEn ? "No paywall" : "No Paywall"}
                 </h3>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
+                <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
                   {isEn
-                    ? "Full terminal access, chart guides, advanced context, and paid Telegram group eligibility."
-                    : "完整终端权限、读图指南、高级上下文和付费 Telegram 群准入资格。"}
+                    ? "Full terminal access, chart guides, advanced context, and alert workflow are open to all users."
+                    : "Full terminal access, chart guides, advanced context, and alert workflow are open to all users."}
                 </p>
-                <div className="mt-7 space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-4xl font-black text-slate-950">29.9</span>
-                    <span className="text-sm font-semibold text-slate-500">USDC / 30 天</span>
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-2xl font-black text-slate-950">79.9</span>
-                    <span className="text-sm font-semibold text-slate-500">USDC / 90 天</span>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs font-semibold text-slate-500">
-                  {isEn ? "Referral first month: 20 USDC" : "使用邀请码首月 20 USDC"}
-                </p>
-                <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">
-                  {isEn
-                    ? "Invite reward: referrer gets +3500 points when invitee subscribes."
-                    : "邀请奖励：被邀请人付费后，邀请人 +3500 积分。"}
-                </div>
                 <ul className="mt-7 space-y-3 border-t border-slate-200 pt-6">
                   {(isEn ? PRO_FEATURES_EN : PRO_FEATURES_ZH).map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
@@ -659,62 +634,54 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                   ))}
                 </ul>
                 <Link
-                  href="/account"
+                  href="/terminal"
                   className="mt-8 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 text-sm font-bold text-white hover:bg-slate-800"
                 >
-                  {isEn ? "Subscribe monthly" : "订阅月付 Pro"}
+                  {isEn ? "Open terminal" : "Open Terminal"}
                   <LandingIcon name="arrow" size={15} />
                 </Link>
               </div>
 
               <div className="flex flex-col rounded-lg border border-slate-200 bg-[#fbfbfa] p-6 shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-bold text-amber-700">
-                  <LandingIcon name="lineChart" />
-                  API
+                  <LandingIcon name="bell" />
+                  Alerts
                 </div>
                 <h3 className="mt-5 text-2xl font-black text-slate-950">
-                  {isEn ? "API" : "API"}
+                  {isEn ? "Telegram push" : "Telegram Push"}
                 </h3>
                 <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
                   {isEn
-                    ? "Not sold as a public product right now. The public site and Telegram workflow remain the supported product surface."
-                    : "目前不作为公开产品售卖。当前支持的产品形态仍是网站终端和 Telegram 工作流。"}
+                    ? "Subscribe via the Telegram bot to receive deviation and threshold alerts without checking the site."
+                    : "Subscribe via the Telegram bot to receive deviation and threshold alerts without checking the site."}
                 </p>
-                <div className="mt-7 rounded-md border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-600">
-                  {isEn ? "Not for sale. We will revisit API packaging only after endpoint docs, keys, limits, and support boundaries are ready." : "暂不售卖。只有接口文档、key、限额和支持边界准备好后，才重新评估 API 产品化。"}
-                </div>
                 <Link
-                  href="/docs/realtime-sources"
+                  href="#contact"
                   className="mt-8 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
                 >
-                  {isEn ? "Read data guide" : "查看数据指南"}
+                  {isEn ? "Contact us" : "Contact Us"}
                   <LandingIcon name="arrow" size={15} />
                 </Link>
               </div>
 
               <div className="flex flex-col rounded-lg border border-slate-200 bg-[#fbfbfa] p-6 shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-bold text-violet-700">
-                  <LandingIcon name="shield" />
-                  Team
+                  <LandingIcon name="database" />
+                  API
                 </div>
                 <h3 className="mt-5 text-2xl font-black text-slate-950">
-                  {isEn ? "Team" : "团队"}
+                  {isEn ? "Not for sale" : "Not for Sale"}
                 </h3>
                 <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
                   {isEn
-                    ? "For teams that need shared access, Telegram workflow support, and manual onboarding."
-                    : "面向需要共享权限、Telegram 工作流支持和人工开通的团队。"}
+                    ? "Not currently for sale. We will revisit API packaging only after endpoint docs, keys, limits, and support boundaries are ready."
+                    : "Not currently for sale. We will revisit API packaging only after endpoint docs, keys, limits, and support boundaries are ready."}
                 </p>
-                <div className="mt-7 rounded-md border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-600">
-                  {isEn
-                    ? "Custom seat and group setup. Best for teams already using the terminal together."
-                    : "自定义席位和群组配置，适合已经一起使用终端的团队。"}
-                </div>
                 <Link
-                  href="/subscription-help"
+                  href="/docs/realtime-sources"
                   className="mt-8 inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
                 >
-                  {isEn ? "Talk to us" : "联系开通"}
+                  {isEn ? "Read data guide" : "Read Data Guide"}
                   <LandingIcon name="arrow" size={15} />
                 </Link>
               </div>
@@ -727,23 +694,21 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
             <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                  {isEn ? "Supported cities" : "当前支持城市"}
+                  {isEn ? "Supported cities" : "Supported Cities"}
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                  {isEn
-                    ? `${supportedCityCount} supported temperature markets`
-                    : `目前支持 ${supportedCityCount} 个温度市场城市`}
+                  {`Currently supported cities: ${supportedCityCount} supported temperature markets`}
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-slate-600">
                   {isEn
                     ? "Coverage is generated from the same city list used by the terminal. If your market is not listed, contact us to evaluate the settlement station, source cadence, and alert workflow."
-                    : "这里复用终端同一份城市列表生成。未列出的市场可以联系评估结算站、数据源频率和提醒工作流。"}
+                    : "Coverage is generated from the same city list used by the terminal. If your market is not listed, contact us to evaluate the settlement station, source cadence, and alert workflow."}
                 </p>
                 <Link
                   href="/terminal"
                   className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm hover:border-slate-300 hover:text-slate-950"
                 >
-                  {isEn ? "Open terminal" : "进入终端"}
+                  {isEn ? "Open terminal" : "Open Terminal"}
                   <LandingIcon name="arrow" size={15} />
                 </Link>
               </div>
@@ -790,17 +755,17 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
           <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-[1fr_auto] md:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                {isEn ? "Contact" : "联系"}
+                {isEn ? "Contact" : "Contact"}
               </p>
               <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
                 {isEn
                   ? "Questions about access, payments, or supported markets?"
-                  : "有访问、付款或支持城市的问题？"}
+                  : "Questions about access, payments, or supported markets?"}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
                 {isEn
                   ? "Reach out directly for subscription recovery, Telegram access, city coverage, and product feedback."
-                  : "订阅恢复、Telegram 入群、城市覆盖和产品反馈，可以直接联系我。"}
+                  : "Reach out directly for subscription recovery, Telegram access, city coverage, and product feedback."}
               </p>
             </div>
 
@@ -818,7 +783,7 @@ function InstitutionalLandingScreen({ locale }: { locale: LandingLocale }) {
                 rel="noreferrer"
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
               >
-                {isEn ? "Follow on X" : "X / Twitter"}
+                {isEn ? "Follow on X" : "Follow on X"}
                 <LandingIcon name="arrow" size={15} />
               </Link>
             </div>

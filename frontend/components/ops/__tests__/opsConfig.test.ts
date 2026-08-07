@@ -20,12 +20,12 @@ export function runTests() {
   );
   assert(
     source.includes("Docker .env") &&
-      source.includes("不需要把 $$ 写成 $$$$") &&
-      source.includes("真实的 $$"),
+      source.includes("No need to write $$ as $$$$") &&
+      source.includes("Real $$"),
     "ops config page must explain that UI-entered sessionIds keep literal $$ and do not need Docker escaping",
   );
   assert(
-    source.includes("最近检查") &&
+    source.includes("Last checked") &&
       source.includes("sensitiveCheckedAt") &&
       source.includes("setSensitiveCheckedAt"),
     "ops config page must show when the post-rotation sensitive health check was performed",

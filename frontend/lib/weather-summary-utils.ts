@@ -7,32 +7,32 @@ import {
 
 const METAR_WX_MAP: Record<
   string,
-  { en: string; icon: string; zh: string }
+  { en: string; icon: string }
 > = {
-  VCSH: { en: "Showers nearby", icon: "🌦️", zh: "附近有阵雨" },
-  SHRA: { en: "Rain showers", icon: "🌦️", zh: "阵雨" },
-  "-SHRA": { en: "Light rain showers", icon: "🌦️", zh: "小阵雨" },
-  "+SHRA": { en: "Heavy rain showers", icon: "⛈️", zh: "强阵雨" },
-  VCRA: { en: "Rain nearby", icon: "🌧️", zh: "附近有降雨" },
-  TSRA: { en: "Thunderstorms with rain", icon: "⛈️", zh: "雷雨" },
-  "-TSRA": { en: "Light thunderstorms with rain", icon: "⛈️", zh: "小雷雨" },
-  "+TSRA": { en: "Heavy thunderstorms with rain", icon: "⛈️", zh: "强雷雨" },
-  RA: { en: "Rain", icon: "🌧️", zh: "降雨" },
-  "-RA": { en: "Light rain", icon: "🌦️", zh: "小雨" },
-  "+RA": { en: "Heavy rain", icon: "⛈️", zh: "强降雨" },
-  SN: { en: "Snow", icon: "❄️", zh: "降雪" },
-  "-SN": { en: "Light snow", icon: "🌨️", zh: "小雪" },
-  "+SN": { en: "Heavy snow", icon: "🌨️", zh: "大雪" },
-  DZ: { en: "Drizzle", icon: "🌦️", zh: "毛毛雨" },
-  FG: { en: "Fog", icon: "🌫️", zh: "雾" },
-  VCFG: { en: "Fog nearby", icon: "🌫️", zh: "附近有雾" },
-  MIFG: { en: "Shallow fog", icon: "🌫️", zh: "浅雾" },
-  BR: { en: "Mist", icon: "🌫️", zh: "薄雾" },
-  HZ: { en: "Haze", icon: "🌫️", zh: "霾" },
-  TS: { en: "Thunderstorm", icon: "⛈️", zh: "雷暴" },
-  VCTS: { en: "Nearby thunderstorm", icon: "⛈️", zh: "附近雷暴" },
-  SQ: { en: "Squall", icon: "💨", zh: "飑线" },
-  GS: { en: "Hail", icon: "🌨️", zh: "冰雹" },
+  VCSH: { en: "Showers nearby", icon: "🌦️" },
+  SHRA: { en: "Rain showers", icon: "🌦️" },
+  "-SHRA": { en: "Light rain showers", icon: "🌦️" },
+  "+SHRA": { en: "Heavy rain showers", icon: "⛈️" },
+  VCRA: { en: "Rain nearby", icon: "🌧️" },
+  TSRA: { en: "Thunderstorms with rain", icon: "⛈️" },
+  "-TSRA": { en: "Light thunderstorms with rain", icon: "⛈️" },
+  "+TSRA": { en: "Heavy thunderstorms with rain", icon: "⛈️" },
+  RA: { en: "Rain", icon: "🌧️" },
+  "-RA": { en: "Light rain", icon: "🌦️" },
+  "+RA": { en: "Heavy rain", icon: "⛈️" },
+  SN: { en: "Snow", icon: "❄️" },
+  "-SN": { en: "Light snow", icon: "🌨️" },
+  "+SN": { en: "Heavy snow", icon: "🌨️" },
+  DZ: { en: "Drizzle", icon: "🌦️" },
+  FG: { en: "Fog", icon: "🌫️" },
+  VCFG: { en: "Fog nearby", icon: "🌫️" },
+  MIFG: { en: "Shallow fog", icon: "🌫️" },
+  BR: { en: "Mist", icon: "🌫️" },
+  HZ: { en: "Haze", icon: "🌫️" },
+  TS: { en: "Thunderstorm", icon: "⛈️" },
+  VCTS: { en: "Nearby thunderstorm", icon: "⛈️" },
+  SQ: { en: "Squall", icon: "💨" },
+  GS: { en: "Hail", icon: "🌨️" },
 };
 
 function isEnglish(locale: Locale) {
@@ -45,7 +45,7 @@ function normalizeCloudSummary(
 ): { icon: string; text: string } {
   const raw = String(cloudDesc || "").trim();
   if (!raw) {
-    return { icon: "🔍", text: isEnglish(locale) ? "Unknown" : "未知" };
+    return { icon: "🔍", text: 'Unknown' };
   }
 
   const lower = raw.toLowerCase();
@@ -55,31 +55,31 @@ function normalizeCloudSummary(
     lower.includes("clear") ||
     lower.includes("sunny")
   ) {
-    return { icon: "☀️", text: isEnglish(locale) ? "Clear" : "晴朗" };
+    return { icon: "☀️", text: 'Clear' };
   }
   if (raw.includes("阴") || lower.includes("overcast")) {
-    return { icon: "☁️", text: isEnglish(locale) ? "Overcast" : "阴天" };
+    return { icon: "☁️", text: 'Overcast' };
   }
   if (raw.includes("多云") || lower.includes("cloud")) {
-    return { icon: "☁️", text: isEnglish(locale) ? "Cloudy" : "多云" };
+    return { icon: "☁️", text: 'Cloudy' };
   }
   if (raw.includes("少云") || lower.includes("few")) {
-    return { icon: "🌤️", text: isEnglish(locale) ? "Mostly clear" : "少云" };
+    return { icon: "🌤️", text: 'Mostly clear' };
   }
   if (raw.includes("散云") || lower.includes("scattered")) {
-    return { icon: "⛅", text: isEnglish(locale) ? "Partly cloudy" : "散云" };
+    return { icon: "⛅", text: 'Partly cloudy' };
   }
   return { icon: "🔍", text: raw };
 }
 
-export function translateMetar(code?: string | null, locale: Locale = "zh-CN") {
+export function translateMetar(code?: string | null, locale: Locale = "en-US") {
   if (!code) return null;
   const metarCode = String(code);
   for (const [key, value] of Object.entries(METAR_WX_MAP)) {
     if (metarCode.includes(key)) {
       return {
         icon: value.icon,
-        label: isEnglish(locale) ? value.en : value.zh,
+        label: value.en,
       };
     }
   }
@@ -88,27 +88,18 @@ export function translateMetar(code?: string | null, locale: Locale = "zh-CN") {
 
 export function getRiskBadgeLabel(
   level?: string | null,
-  locale: Locale = "zh-CN",
+  locale: Locale = "en-US",
 ) {
-  if (isEnglish(locale)) {
-    return (
-      {
-        high: "🔴 High Risk",
-        low: "🟢 Low Risk",
-        medium: "🟠 Medium Risk",
-      }[String(level || "low")] || "Unknown Risk"
-    );
-  }
   return (
     {
-      high: "🔴 高风险",
-      low: "🟢 低风险",
-      medium: "🟠 中风险",
-    }[String(level || "low")] || "未知风险"
+      high: "🔴 High Risk",
+      low: "🟢 Low Risk",
+      medium: "🟠 Medium Risk",
+    }[String(level || "low")] || "Unknown Risk"
   );
 }
 
-export function getWeatherSummary(detail: CityDetail, locale: Locale = "zh-CN") {
+export function getWeatherSummary(detail: CityDetail, locale: Locale = "en-US") {
   const current = detail.current || {};
   const cloud = normalizeCloudSummary(current.cloud_desc, locale);
   let weatherText = cloud.text;
@@ -125,7 +116,7 @@ export function getWeatherSummary(detail: CityDetail, locale: Locale = "zh-CN") 
   return { weatherIcon, weatherText };
 }
 
-export function getHeroMetaItems(detail: CityDetail, locale: Locale = "zh-CN") {
+export function getHeroMetaItems(detail: CityDetail, locale: Locale = "en-US") {
   const current = detail.current || {};
   const parts: string[] = [];
   const sourceTag = getRealtimeObservationTag(detail);
@@ -134,9 +125,7 @@ export function getHeroMetaItems(detail: CityDetail, locale: Locale = "zh-CN") {
   if (current.obs_time) {
     const ageText =
       current.obs_age_min != null && current.obs_age_min >= 30
-        ? isEnglish(locale)
-          ? ` (${current.obs_age_min} min ago)`
-          : `（${current.obs_age_min} 分钟前）`
+        ? ` (${current.obs_age_min} min ago)`
         : "";
     parts.push(`✈️ ${sourceTag} ${current.obs_time}${ageText}`);
   }
@@ -163,29 +152,20 @@ export function getHeroMetaItems(detail: CityDetail, locale: Locale = "zh-CN") {
     const timeMatch = detail.mgm.time?.match(/T?(\d{2}:\d{2})/);
     const timeText = timeMatch ? ` @${timeMatch[1]}` : "";
     parts.push(
-      isEnglish(locale)
-        ? `🛰 MGM Obs: ${detail.mgm.temp}${detail.temp_symbol}${timeText}`
-        : `🛰 MGM 实测: ${detail.mgm.temp}${detail.temp_symbol}${timeText}`,
+      `🛰 MGM Obs: ${detail.mgm.temp}${detail.temp_symbol}${timeText}`,
     );
   }
 
   const trend = detail.trend || {};
   if (trend.is_dead_market) {
-    parts.push(isEnglish(locale) ? "☠️ Flat market" : "☠️ 死盘");
+    parts.push('☠️ Flat market');
   } else if (trend.direction && trend.direction !== "unknown") {
-    const labels: Record<string, string> = isEnglish(locale)
-      ? {
-          falling: "📉 Cooling",
-          mixed: "📊 Choppy",
-          rising: "📈 Warming",
-          stagnant: "⏸ Flat",
-        }
-      : {
-          falling: "📉 降温中",
-          mixed: "📊 波动中",
-          rising: "📈 升温中",
-          stagnant: "⏸ 持平",
-        };
+    const labels: Record<string, string> = {
+      falling: "📉 Cooling",
+      mixed: "📊 Choppy",
+      rising: "📈 Warming",
+      stagnant: "⏸ Flat",
+    };
     parts.push(labels[trend.direction] || trend.direction);
   }
 

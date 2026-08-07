@@ -33,17 +33,17 @@ export function runTests() {
 
   assert.match(
     charts,
-    /DEB 可用近期命中率 by 城市/,
+    /DEB usable recent hit rate by city/,
     "ops DEB hit-rate chart should label the metric as usable recent accuracy",
   );
   assert.match(
     charts,
-    /DEB 可用近期 MAE by 城市/,
+    /DEB usable recent MAE by city/,
     "ops DEB MAE chart should label the metric as usable recent MAE",
   );
   assert.match(
     charts,
-    /可用近期命中率/,
+    /usable recent hit rate/,
     "ops DEB hit-rate tooltip should describe the usable recent metric",
   );
 }

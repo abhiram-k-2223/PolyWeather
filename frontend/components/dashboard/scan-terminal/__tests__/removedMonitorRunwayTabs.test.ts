@@ -50,8 +50,8 @@ export function runTests() {
   assert(
     !dashboardSource.includes('setActiveView("monitor")') &&
       !dashboardSource.includes('setActiveView("runway")') &&
-      !dashboardSource.includes("市场监控") &&
-      !dashboardSource.includes("跑道观测"),
+      !dashboardSource.includes("Market monitor") &&
+      !dashboardSource.includes("Runway observation"),
     "dashboard must not expose market monitor or runway observation tabs",
   );
   assert(!fs.existsSync(runwayPanelPath), "dedicated runway observation panel must be removed");

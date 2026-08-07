@@ -28,7 +28,6 @@ from src.utils.telegram_i18n import (
 )
 
 # Forum topic routing: maps city_key -> message_thread_id for the push forum group.
-# Created by scripts/create_forum_topics.py, stored in the runtime data dir.
 _CITY_THREAD_IDS_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "data", "city_thread_ids.json",

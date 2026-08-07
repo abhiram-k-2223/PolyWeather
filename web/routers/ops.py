@@ -1,38 +1,26 @@
-"""Operations/admin API routes."""
+"""Operations/admin API routes.
+
+The subscription/payment stack has been removed from the roadmap, so the
+ops router exposes only operational admin endpoints (feedback, config,
+logs, health, analytics, training, source health, truth history).
+"""
 
 from fastapi import APIRouter, Request, Response
 
-from web.core import FeedbackRewardRequest, GrantPointsRequest
 from web.services.ops_api import (
-    extend_ops_subscription,
     get_ops_analytics_funnel,
-    get_ops_billing_risk,
     get_ops_config,
     get_ops_sensitive_config,
-    get_ops_memberships_growth,
-    get_ops_memberships_overview,
     get_ops_health_check,
     get_ops_logs,
     get_ops_observation_collector_status,
     get_ops_source_health,
     get_ops_truth_history,
-    get_ops_weekly_leaderboard,
     list_ops_feedback,
-    get_ops_user_subscriptions,
-    grant_ops_points,
-    transfer_ops_points,
-    grant_ops_subscription,
-    list_ops_memberships,
-    list_ops_payment_incidents,
-    resolve_ops_payment_incident,
-    list_ops_payments,
-    search_ops_users,
     update_ops_config,
-    grant_ops_feedback_reward,
-    update_ops_sensitive_config,
     update_ops_feedback_status,
     get_ops_training_accuracy,
-    get_ops_telegram_audit,
+    update_ops_sensitive_config,
 )
 from web.services.request_timing import ServerTimingRecorder, attach_server_timing_header
 
@@ -65,16 +53,6 @@ async def ops_online_users(request: Request, response: Response):
         )
 
 
-@router.get("/api/ops/users")
-async def ops_search_users(request: Request, q: str = "", limit: int = 20):
-    return search_ops_users(request, q=q, limit=limit)
-
-
-@router.get("/api/ops/leaderboard/weekly")
-async def ops_weekly_leaderboard(request: Request, limit: int = 20):
-    return get_ops_weekly_leaderboard(request, limit=limit)
-
-
 @router.get("/api/ops/feedback")
 async def ops_feedback(request: Request, limit: int = 100, status: str = ""):
     return list_ops_feedback(request, limit=limit, status=status)
@@ -87,85 +65,6 @@ async def ops_feedback_update_status(request: Request, feedback_id: int):
     body = _json.loads(body_bytes.decode("utf-8") or "{}")
     status = str(body.get("status") or "").strip()
     return update_ops_feedback_status(request, feedback_id=feedback_id, status=status)
-
-
-@router.post("/api/ops/feedback/{feedback_id}/reward")
-async def ops_feedback_grant_reward(
-    request: Request,
-    feedback_id: int,
-    body: FeedbackRewardRequest,
-):
-    return grant_ops_feedback_reward(
-        request,
-        feedback_id=feedback_id,
-        points=body.points,
-        reason=body.reason,
-    )
-
-
-@router.get("/api/ops/memberships")
-async def ops_memberships(request: Request, limit: int = 200):
-    return list_ops_memberships(request, limit=limit)
-
-
-@router.get("/api/ops/memberships/growth")
-async def ops_memberships_growth(request: Request, days: int = 90):
-    return get_ops_memberships_growth(request, days=days)
-
-
-@router.get("/api/ops/memberships/overview")
-async def ops_memberships_overview(
-    request: Request,
-    limit: int = 200,
-    days: int = 90,
-):
-    return get_ops_memberships_overview(request, limit=limit, days=days)
-
-
-@router.get("/api/ops/payments/incidents")
-async def ops_payment_incidents(
-    request: Request,
-    limit: int = 50,
-    reason: str = "",
-    include_resolved: bool = False,
-):
-    return list_ops_payment_incidents(
-        request,
-        limit=limit,
-        reason=reason,
-        include_resolved=include_resolved,
-    )
-
-
-@router.post("/api/ops/payments/incidents/{event_id}/resolve")
-async def ops_resolve_payment_incident(request: Request, event_id: int):
-    return resolve_ops_payment_incident(request, event_id)
-
-
-@router.get("/api/ops/payments")
-async def ops_payments(request: Request, limit: int = 50):
-    return list_ops_payments(request, limit=limit)
-
-
-@router.get("/api/ops/billing-risk")
-async def ops_billing_risk(request: Request, days: int = 30, limit: int = 80):
-    return get_ops_billing_risk(request, days=days, limit=limit)
-
-
-@router.post("/api/ops/users/grant-points")
-async def ops_grant_points(request: Request, body: GrantPointsRequest):
-    return grant_ops_points(request, body)
-
-
-@router.post("/api/ops/users/transfer-points")
-async def ops_transfer_points(request: Request):
-    import json as _json
-    body_bytes = await request.body()
-    body = _json.loads(body_bytes.decode("utf-8"))
-    from_email = str(body.get("from_email") or "").strip()
-    to_email = str(body.get("to_email") or "").strip()
-    amount = int(body.get("amount") or 0)
-    return transfer_ops_points(request, from_email=from_email, to_email=to_email, amount=amount)
 
 
 @router.get("/api/ops/analytics/funnel")
@@ -228,35 +127,6 @@ async def ops_update_sensitive_config(request: Request):
     return update_ops_sensitive_config(request, key, value)
 
 
-# ── Subscriptions ───────────────────────────────────────────────────
-
-@router.post("/api/ops/subscriptions/grant")
-async def ops_subscription_grant(request: Request):
-    import json as _json
-    body_bytes = await request.body()
-    body = _json.loads(body_bytes.decode("utf-8"))
-    email = str(body.get("email") or "").strip()
-    plan_code = str(body.get("plan_code") or "pro_monthly").strip()
-    days = int(body.get("days") or 30)
-    deduct_points = int(body.get("deduct_points") or 0)
-    return grant_ops_subscription(request, email=email, plan_code=plan_code, days=days, deduct_points=deduct_points)
-
-
-@router.post("/api/ops/subscriptions/extend")
-async def ops_subscription_extend(request: Request):
-    import json as _json
-    body_bytes = await request.body()
-    body = _json.loads(body_bytes.decode("utf-8"))
-    email = str(body.get("email") or "").strip()
-    days = int(body.get("additional_days") or 30)
-    return extend_ops_subscription(request, email=email, additional_days=days)
-
-
-@router.get("/api/ops/subscriptions/user")
-async def ops_user_subscriptions(request: Request, email: str = ""):
-    return get_ops_user_subscriptions(request, email=email)
-
-
 # ── Logs ────────────────────────────────────────────────────────────
 
 @router.get("/api/ops/logs")
@@ -293,10 +163,3 @@ async def ops_observation_collector_status(
 @router.get("/api/ops/training/accuracy")
 async def ops_training_accuracy(request: Request):
     return get_ops_training_accuracy(request)
-
-
-@router.get("/api/ops/telegram/members-audit")
-async def ops_telegram_audit(request: Request):
-    return get_ops_telegram_audit(request)
-
-

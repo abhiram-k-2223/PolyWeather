@@ -27,15 +27,15 @@ export function runTests() {
     "ops client must expose the city source health endpoint",
   );
   assert(
-    systemPage.includes("城市数据源健康") &&
+    systemPage.includes("City data source health") &&
       systemPage.includes("sourceHealth") &&
       systemPage.includes("MGM、KNMI、IMS") &&
-      systemPage.includes("断线") &&
-      systemPage.includes("延迟") &&
+      systemPage.includes("Disconnected") &&
+      systemPage.includes("Latency") &&
       systemPage.includes("sourceReasonLabel") &&
-      systemPage.includes("观测时间缺失") &&
+      systemPage.includes("Missing observation time") &&
       systemPage.includes("formatOpsValue") &&
-      systemPage.includes("强制刷新"),
+      systemPage.includes("Force refresh"),
     "ops system page must show readable source reasons, object values, and cache force-refresh metrics",
   );
   assert(
@@ -50,11 +50,11 @@ export function runTests() {
     "ops client must expose observation collector status endpoint",
   );
   assert(
-    systemPage.includes("观测采集器") &&
+    systemPage.includes("Observation collector") &&
       systemPage.includes("collectorStatus") &&
       systemPage.includes("failure_count") &&
       systemPage.includes("last_latency_ms") &&
-      systemPage.includes("冷却"),
+      systemPage.includes("Cooldown"),
     "ops system page must show observation collector failures, latency, and cooldown status",
   );
   assert(

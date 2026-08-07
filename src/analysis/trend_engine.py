@@ -31,11 +31,11 @@ SETTLEMENT_SOURCE_LABELS = {
 }
 
 _CLOUD_RANK_LABELS = {
-    0: "晴空到少云",
-    1: "少云",
-    2: "散云",
-    3: "多云",
-    4: "阴天",
+    0: "Clear to few clouds",
+    1: "Few clouds",
+    2: "Scattered clouds",
+    3: "Mostly cloudy",
+    4: "Overcast",
 }
 
 
@@ -170,15 +170,15 @@ def _resolve_settlement_source_label(city_name: Optional[str]) -> str:
 
 def _wind_bucket_label(wdir: Optional[float]) -> str:
     if wdir is None:
-        return "风向信号不明确"
+        return "Wind direction unclear"
     deg = float(wdir) % 360
     if 135 <= deg < 225:
-        return "南风主导"
+        return "Southerly dominance"
     if 45 <= deg < 135:
-        return "东风主导"
+        return "Easterly dominance"
     if 225 <= deg < 315:
-        return "西风主导"
-    return "北风主导"
+        return "Westerly dominance"
+    return "Northerly dominance"
 
 
 def _describe_recent_structure(
@@ -225,46 +225,46 @@ def _describe_recent_structure(
     lines: List[str] = []
 
     if cloud_delta >= 2 and temp_delta is not None and temp_delta >= 0:
-        lines.append("云层明显增厚，但近报尚未跟随降温，短时更像中高云增多或暖湿输送前段。")
+        lines.append("Clouds thickening, but latest reports have not followed with cooling; more like mid/high cloud increase or warm-moist advection leading edge.")
     elif cloud_delta >= 2 and temp_delta is not None and temp_delta <= -0.5:
-        lines.append("云量抬升且温度同步回落，云雨压温的约束正在增强。")
+        lines.append("Cloud cover rising with temperature falling together; cloud-rain suppression is strengthening.")
     elif cloud_delta <= -2 and temp_delta is not None and temp_delta >= 0.5:
-        lines.append("云量回落并伴随升温，短时日照增温效率在改善。")
+        lines.append("Cloud cover retreating with warming; short-term solar warming efficiency improving.")
 
     if wind_angle is not None and wind_angle >= 60:
         lines.append(
-            f"低层风向出现明显切换，由 {_wind_bucket_label(wdir_old)} 转为 {_wind_bucket_label(wdir_new)}。"
+            f"Low-level wind direction shifted from {_wind_bucket_label(wdir_old)} to {_wind_bucket_label(wdir_new)}."
         )
     elif wdir_new is not None:
-        lines.append(f"当前低层风场以{_wind_bucket_label(wdir_new)}为主。")
+        lines.append(f"Low-level wind field dominated by {_wind_bucket_label(wdir_new)}.")
 
     if altim_delta is not None:
         if altim_delta <= -1.5 and trend_direction != "falling":
-            lines.append("气压继续走低，边界层仍偏活跃，峰值尚不能轻判结束。")
+            lines.append("Pressure still falling; boundary layer remains active; peak cannot yet be called over.")
         elif altim_delta >= 1.5 and peak_status != "before":
-            lines.append("气压回升信号更明显，若后续再配合回落，日高温锁定概率会继续上升。")
+            lines.append("Pressure recovery clearer; if it pairs with further temp drop, the daily-high lock probability keeps rising.")
 
     if humidity is not None and humidity >= 80 and not wx_desc:
-        lines.append(f"湿度已到 {humidity:.0f}% 左右，后续若云层继续增厚，需要防范压温。")
+        lines.append(f"Humidity around {humidity:.0f}%; if cloud keeps thickening, watch for suppressed temps.")
     elif wx_desc:
-        lines.append(f"当前伴随“{wx_desc}”天气现象，短时体感与实测升温效率通常都会受抑制。")
+        lines.append(f"Currently with '{wx_desc}' wx phenomena; short-term feel and measured warming usually suppressed.")
 
     if max_so_far is not None and cur_temp is not None:
         gap = max_so_far - cur_temp
         if gap >= 2.0 and peak_status != "before":
             lines.append(
-                f"当前温度较今日峰值已回落 {gap:.1f}{temp_symbol}，若后续再无明显回补，日高温大概率已接近锁定。"
+                f"Temperature has fallen {gap:.1f}{temp_symbol} off today's peak; without a rebound, the daily high is likely near-locked."
             )
         elif gap <= 0.5 and peak_status == "in_window":
-            lines.append("当前温度仍贴近当日峰值，窗口内仍保留再创新高的可能。")
+            lines.append("Temp still near today's peak; a new high remains possible within the window.")
 
     if not lines:
         if trend_direction == "rising":
-            lines.append("近报仍偏升温，短时还看不到明确见顶信号。")
+            lines.append("Latest reports still warming; no clear topping signal yet.")
         elif trend_direction == "falling":
-            lines.append("近报已进入回落段，后续重点看回落是否延续。")
+            lines.append("Latest reports turning down; focus on whether the fall continues.")
         else:
-            lines.append("当前结构信号偏中性，仍需继续盯近报温度与风云演变。")
+            lines.append("Structural signal neutral; keep watching latest temps and cloud/wind evolution.")
 
     return lines[0], lines
 
@@ -350,9 +350,9 @@ def analyze_weather_trend(
         current_forecasts["MGM"] = _sf(mgm.get("today_high"))
         
     if weather_data.get("hko_forecast") is not None:
-        current_forecasts["HKO(港天文)"] = _sf(weather_data.get("hko_forecast"))
+        current_forecasts["HKO"] = _sf(weather_data.get("hko_forecast"))
     if weather_data.get("cwa_forecast") is not None:
-        current_forecasts["CWA(台气象)"] = _sf(weather_data.get("cwa_forecast"))
+        current_forecasts["CWA"] = _sf(weather_data.get("cwa_forecast"))
 
     mm_forecasts = weather_data.get("multi_model", {}).get("forecasts", {})
     for m_name, m_val in mm_forecasts.items():
@@ -476,10 +476,10 @@ def analyze_weather_trend(
             }
             insights.insert(
                 0,
-                f"🧬 <b>DEB 融合预测</b>：<b>{deb_prediction}{temp_symbol}</b> ({deb_weights})",
+                f"🧬 <b>DEB blended forecast</b>: <b>{deb_prediction}{temp_symbol}</b> ({deb_weights})",
             )
             ai_features.append(
-                f"🧬 DEB系统已通过历史偏差矫正算出期待点是: {deb_prediction}{temp_symbol}。"
+                f"🧬 DEB system, after historical-bias correction, expects: {deb_prediction}{temp_symbol}。"
             )
         _deb_to_save = deb_prediction
 
@@ -507,37 +507,37 @@ def analyze_weather_trend(
                 [f"{t}{temp_symbol}@{tm}" for tm, t in recent_temps[:3]]
             )
             if all_same:
-                trend_desc = f"📉 温度暂时停滞（{trend_display}）。"
+                trend_desc = f"📉 Temperature stalled（{trend_display}）。"
                 trend_direction = "stagnant"
             elif all_rising and diff > 0:
-                trend_desc = f"📈 仍在升温（{trend_display}）。"
+                trend_desc = f"📈 Still warming（{trend_display}）。"
                 trend_direction = "rising"
             elif all_falling and diff < 0:
-                trend_desc = f"📉 已开始降温（{trend_display}）。"
+                trend_desc = f"📉 Cooling started（{trend_display}）。"
                 trend_direction = "falling"
             else:
-                trend_desc = f"📊 温度波动中（{trend_display}）。"
+                trend_desc = f"📊 Temperature mixed（{trend_display}）。"
                 trend_direction = "mixed"
         elif diff == 0:
             trend_display = (
                 f"{prev_val}{temp_symbol}@{recent_temps[1][0]} → "
                 f"{latest_val}{temp_symbol}@{recent_temps[0][0]}"
             )
-            trend_desc = f"📉 温度持平（{trend_display}）。"
+            trend_desc = f"📉 Temperature flat（{trend_display}）。"
             trend_direction = "stagnant"
         elif diff > 0:
             trend_display = (
                 f"{prev_val}{temp_symbol}@{recent_temps[1][0]} → "
                 f"{latest_val}{temp_symbol}@{recent_temps[0][0]}"
             )
-            trend_desc = f"📈 仍在升温（{prev_val} → {latest_val}{temp_symbol}）。"
+            trend_desc = f"📈 Still warming（{prev_val} → {latest_val}{temp_symbol}）。"
             trend_direction = "rising"
         else:
             trend_display = (
                 f"{prev_val}{temp_symbol}@{recent_temps[1][0]} → "
                 f"{latest_val}{temp_symbol}@{recent_temps[0][0]}"
             )
-            trend_desc = f"📉 已开始降温（{prev_val} → {latest_val}{temp_symbol}）。"
+            trend_desc = f"📉 Cooling started（{prev_val} → {latest_val}{temp_symbol}）。"
             trend_direction = "falling"
 
     is_cooling = trend_direction == "falling"
@@ -588,31 +588,31 @@ def analyze_weather_trend(
 
     if city_name and current_forecasts and deb_prediction is not None:
         # DEB blending uses the already-computed set of model forecasts
-                if ai_features and "DEB系统已通过历史偏差矫正算出期待点是" in ai_features[0]:
+                if ai_features and "DEB system, after historical-bias correction, expects" in ai_features[0]:
                     ai_features[0] = (
-                        f"🧬 DEB系统已通过历史偏差矫正算出期待点是: {deb_prediction}{temp_symbol}。"
+                        f"🧬 DEB system, after historical-bias correction, expects: {deb_prediction}{temp_symbol}。"
                     )
 
     if trend_direction == "stagnant":
         if peak_status == "before":
             trend_desc = (
-                f"🕒 峰值窗口前温度暂时停滞（{trend_display or '近2-3报持平'}），"
-                "尚不能据此判定到顶。"
+                f"🕒 Stalled ahead of the peak window ({trend_display or 'flat across last 2-3 reports'}),"
+                "Cannot yet call the top from this."
             )
         elif peak_status == "in_window":
             trend_desc = (
-                f"⏱️ 峰值窗口内温度停滞（{trend_display or '近2-3报持平'}），"
-                "需继续观察后续是否再创新高。"
+                f"⏱️ Stalled inside the peak window ({trend_display or 'flat across last 2-3 reports'}),"
+                "Keep watching for a new high."
             )
         else:
             trend_desc = (
-                f"📉 峰值窗口后温度停滞（{trend_display or '近2-3报持平'}），"
-                "存在到顶迹象。"
+                f"📉 Stalled after the peak window ({trend_display or 'flat across last 2-3 reports'}),"
+                "Topping signals present."
             )
     elif trend_direction == "falling" and peak_status == "before":
         trend_desc = (
-            f"📉 峰值窗口前出现回落（{trend_display or '近2报回落'}），"
-            "暂不能单凭回落判定今日高温已锁定。"
+            f"📉 Falling ahead of the peak window ({trend_display or 'fall across last 2 reports'}),"
+            "Cannot lock today's high from the fall alone."
         )
 
     recent_obs = metar.get("recent_obs", [])
@@ -626,9 +626,9 @@ def analyze_weather_trend(
         primary_current=primary_current,
     )
     if dynamic_summary:
-        insights.append(f"🧩 <b>结构解读</b>：{dynamic_summary}")
+        insights.append(f"🧩 <b>Structure read</b>: {dynamic_summary}")
     for note in dynamic_notes:
-        ai_features.append(f"🧩 结构解读: {note}")
+        ai_features.append(f"🧩 Structure read: {note}")
 
     # === Ensemble ===
     ensemble = weather_data.get("ensemble", {})
@@ -642,8 +642,8 @@ def analyze_weather_trend(
 
     if ens_p10 is not None and ens_p90 is not None and ens_median is not None:
         msg1 = (
-            f"📊 <b>集合预报</b>：中位数 {ens_median}{temp_symbol}，"
-            f"90% 区间 [{ens_p10}{temp_symbol} - {ens_p90}{temp_symbol}]。"
+            f"📊 <b>Ensemble forecast</b>：median {ens_median}{temp_symbol}，"
+            f"90% range [{ens_p10}{temp_symbol} - {ens_p90}{temp_symbol}]。"
         )
         if not is_cooling:
             insights.append(msg1)
@@ -654,15 +654,15 @@ def analyze_weather_trend(
                 max_so_far is None or max_so_far < om_today - 0.5
             ):
                 ai_features.append(
-                    f"⚡ 预报偏高：确定性预报 {om_today}{temp_symbol} 超集合90%上限，"
-                    f"更可能接近 {ens_median}{temp_symbol}。"
+                    f"⚡ Forecast too high: deterministic {om_today}{temp_symbol} above ensemble 90% upper bound,"
+                    f"more likely near {ens_median}{temp_symbol}."
                 )
             elif om_today < ens_p10 and (
                 max_so_far is None or max_so_far < ens_median
             ):
                 ai_features.append(
-                    f"⚡ 预报偏低：确定性预报 {om_today}{temp_symbol} 低于集合90%下限，"
-                    f"更可能接近 {ens_median}{temp_symbol}。"
+                    f"⚡ Forecast too low: deterministic {om_today}{temp_symbol} below ensemble 90% lower bound,"
+                    f"more likely near {ens_median}{temp_symbol}."
                 )
 
         # === Sigma calculation ===
@@ -742,11 +742,11 @@ def analyze_weather_trend(
     if is_dead_market:
         settled_wu = apply_city_settlement(city_name, max_so_far) if max_so_far is not None else 0
         dead_msg = (
-            f"🎲 <b>结算预测</b>：已锁定 {settled_wu}{temp_symbol} "
-            f"({settlement_source_label} 死盘确认)"
+            f"🎲 <b>Settlement forecast</b>: locked at {settled_wu}{temp_symbol} "
+            f"({settlement_source_label} dead-market confirmed)"
         )
         insights.append(dead_msg)
-        ai_features.append("🎲 状态: 确认死盘，结算已无悬念。")
+        ai_features.append("🎲 Status: dead market confirmed; settlement no longer in doubt.")
         if max_so_far is not None:
             mu = max_so_far
             probabilities = [
@@ -783,12 +783,12 @@ def analyze_weather_trend(
 
         # Forecast miss severity for AI
         if forecast_miss_deg > 2.0 and peak_status in ("past", "in_window"):
-            severity = "重" if forecast_miss_deg > 5.0 else ("中" if forecast_miss_deg > 3.0 else "轻")
+            severity = "severe" if forecast_miss_deg > 5.0 else ("moderate" if forecast_miss_deg > 3.0 else "mild")
             min_fc = min((v for v in forecast_highs if v is not None), default=None)
-            _trend_dir = "降温" if is_cooling else ("停滞" if "停滞" in trend_desc else "升温")
+            _trend_dir = "cooling" if is_cooling else ("stalled" if "stalled" in trend_desc else "warming")
             ai_features.append(
-                f"🚨 预报崩盘 [{severity}级失准]: 最低预报 {min_fc}{temp_symbol} vs "
-                f"实测最高 {max_so_far}{temp_symbol}，偏差 {forecast_miss_deg}°。当前趋势: {_trend_dir}。"
+                f"🚨 Forecast blowout [{severity} miss]: lowest forecast {min_fc}{temp_symbol} vs "
+                f"observed high {max_so_far}{temp_symbol}, miss {forecast_miss_deg} deg. Trend: {_trend_dir}."
             )
 
         # Probability (legacy Gaussian buckets)
@@ -807,20 +807,20 @@ def analyze_weather_trend(
             ]
             if prob_parts:
                 prob_str = " | ".join(prob_parts)
-                insights.append(f"🎲 <b>结算概率</b> (μ={mu:.1f})：{prob_str}")
-                ai_features.append(f"🎲 数学概率分布：{prob_str}")
+                insights.append(f"🎲 <b>Settlement probability</b> (μ={mu:.1f})：{prob_str}")
+                ai_features.append(f"🎲 Mathematical probability distribution：{prob_str}")
 
     # === Actual exceeds forecast ===
     if max_so_far is not None and forecast_high is not None:
         if max_so_far > forecast_high + 0.5:
             exceed_by = max_so_far - forecast_high
             bt_msg = (
-                f"🚨 <b>实测已超预报</b>：{max_so_far}{temp_symbol} 超过上限 "
+                f"🚨 <b>Actual exceeds forecast</b>：{max_so_far}{temp_symbol} above the upper bound "
                 f"{forecast_high}{temp_symbol}（+{exceed_by:.1f}°）。"
             )
             insights.append(bt_msg)
             ai_features.append(
-                f"🚨 异常: 实测已冲破所有预报上限 ({max_so_far}{temp_symbol} vs {forecast_high}{temp_symbol})。"
+                f"🚨 Anomaly: actual blew through all forecast upper bounds ({max_so_far}{temp_symbol} vs {forecast_high}{temp_symbol})."
             )
     if trend_desc:
         ai_features.append(trend_desc)
@@ -838,9 +838,9 @@ def analyze_weather_trend(
             dist_to_next = 1.0 - fractional
             if dist_to_next <= 0.3:
                 msg = (
-                    f"⚖️ <b>结算边界</b>：当前最高 {max_so_far}{temp_symbol} → {settlement_source_label} 结算 "
-                    f"<b>{settled}{temp_symbol}</b>，但只差 <b>{dist_to_next:.1f}°</b> "
-                    f"就会进位到 {settled + 1}{temp_symbol}！"
+                    f"⚖️ <b>Settlement boundary</b>: current high {max_so_far}{temp_symbol} -> {settlement_source_label} settles "
+                    f"<b>{settled}{temp_symbol}</b>, only <b>{dist_to_next:.1f} deg</b> "
+                    f" from rounding up to {settled + 1}{temp_symbol}!"
                 )
                 insights.append(msg)
                 ai_features.append(msg)
@@ -850,15 +850,15 @@ def analyze_weather_trend(
             if dist_to_boundary <= 0.3:
                 if fractional < 0.5:
                     msg = (
-                        f"⚖️ <b>结算边界</b>：当前最高 {max_so_far}{temp_symbol} → {settlement_source_label} 结算 "
-                        f"<b>{settled}{temp_symbol}</b>，但只差 {0.5 - fractional:.1f}° "
-                        f"就会进位到 {settled + 1}{temp_symbol}！"
+                        f"⚖️ <b>Settlement boundary</b>: current high {max_so_far}{temp_symbol} -> {settlement_source_label} settles "
+                        f"<b>{settled}{temp_symbol}</b>，only {0.5 - fractional:.1f} deg "
+                        f" from rounding up to {settled + 1}{temp_symbol}!"
                     )
                 else:
                     msg = (
-                        f"⚖️ <b>结算边界</b>：当前最高 {max_so_far}{temp_symbol} → {settlement_source_label} 结算 "
-                        f"<b>{settled}{temp_symbol}</b>，刚刚越过进位线，再降 "
-                        f"<b>{fractional - 0.5:.1f}°</b> 就会回落到 {settled - 1}{temp_symbol}。"
+                        f"⚖️ <b>Settlement boundary</b>: current high {max_so_far}{temp_symbol} -> {settlement_source_label} settles "
+                        f"<b>{settled}{temp_symbol}</b>，just crossed the rounding line; drop "
+                        f"<b>{fractional - 0.5:.1f}°</b>  to fall back to {settled - 1}{temp_symbol}."
                     )
                 insights.append(msg)
                 ai_features.append(msg)
@@ -871,72 +871,72 @@ def analyze_weather_trend(
             else peak_hours[0]
         )
         ai_features.append(
-            f"🧭 峰值窗口判定: 当前 {local_hour:02d}:{local_minute:02d}，"
-            f"预报最热窗口 {window}，状态={peak_status}。"
+            f"🧭 Peak-window check: now {local_hour:02d}:{local_minute:02d},"
+            f"forecast hottest window {window}, status={peak_status}."
         )
         if local_hour <= last_peak_h:
             if last_peak_h < 6:
-                ai_features.append("⚠️ <b>提示</b>：预测最热在凌晨，后续气温可能一路走低。")
+                ai_features.append("⚠️ <b>Note</b>: hottest is forecast pre-dawn; temps may keep falling after.")
             elif local_hour < first_peak_h and (
                 max_so_far is None or max_so_far < forecast_high
             ):
                 target_temp = om_today if om_today is not None else forecast_high
                 ai_features.append(
-                    f"🎯 <b>关注重点</b>：看看那个时段能否涨到 {target_temp}{temp_symbol}。"
+                    f"🎯 <b>Focus</b>: watch whether that window reaches {target_temp}{temp_symbol}."
                 )
 
         remain_hrs = first_peak_h - local_hour_frac
         if local_hour_frac > last_peak_h:
-            ai_features.append(f"⏱️ 状态: 预报峰值时段已过 ({window})。")
-            ai_features.append("✅ 判定约束: 峰值窗口已过，可结合回落幅度判断是否锁定。")
+            ai_features.append(f"⏱️ Status: forecast peak window passed ({window}).")
+            ai_features.append("✅ Constraint: peak window passed; judge the lock from the fall magnitude.")
         elif first_peak_h <= local_hour_frac <= last_peak_h:
             remain_in_window = last_peak_h - local_hour_frac
             if remain_in_window < 1:
                 ai_features.append(
-                    f"⏱️ 状态: 正处于预报最热窗口 ({window})内，距窗口结束约 {int(remain_in_window * 60)} 分钟。"
+                    f"⏱️ Status: inside forecast hottest window ({window}); about {int(remain_in_window * 60)} min left."
                 )
             else:
                 ai_features.append(
-                    f"⏱️ 状态: 正处于预报最热窗口 ({window})内，距窗口结束约 {remain_in_window:.1f}h。"
+                    f"⏱️ Status: inside forecast hottest window ({window}); about {remain_in_window:.1f}h left."
                 )
-            ai_features.append("⚠️ 判定约束: 窗口内即使停滞，也需后续2报确认未再创新高。")
+            ai_features.append("⚠️ Constraint: even if stalled in-window, wait 2 more reports confirming no new high.")
         elif remain_hrs < 1:
             ai_features.append(
-                f"⏱️ 状态: 距最热时段开始还有约 {int(remain_hrs * 60)} 分钟 ({window})，尚未进入峰值窗口。"
+                f"⏱️ Status: about {int(remain_hrs * 60)} min to hottest window ({window}); not yet in peak window."
             )
-            ai_features.append("🚫 判定约束: 峰值窗口前禁止判定‘已锁定/已确认底线’。")
+            ai_features.append("🚫 Constraint: before the peak window, do not call 'locked/confirmed floor'.")
         else:
-            ai_features.append(f"⏱️ 状态: 距最热时段开始还有约 {remain_hrs:.1f}h ({window})。")
-            ai_features.append("🚫 判定约束: 峰值窗口前禁止判定‘已锁定/已确认底线’。")
+            ai_features.append(f"⏱️ Status: about {remain_hrs:.1f}h to hottest window ({window}).")
+            ai_features.append("🚫 Constraint: before the peak window, do not call 'locked/confirmed floor'.")
 
     # === AI fact features ===
     if cur_temp is not None:
-        ai_features.append(f"🌡️ 当前实测温度: {cur_temp}{temp_symbol}。")
+        ai_features.append(f"🌡️ Current observed temp: {cur_temp}{temp_symbol}.")
     if max_so_far is not None:
         ai_features.append(
-            f"🏔️ 今日实测最高温: {max_so_far}{temp_symbol} "
-            f"({settlement_source_label}结算={apply_city_settlement(city_name, max_so_far)}{temp_symbol})。"
+            f"🏔️ Today's observed high: {max_so_far}{temp_symbol} "
+            f"({settlement_source_label} settled={apply_city_settlement(city_name, max_so_far)}{temp_symbol})."
         )
     if city_name:
         _profile = get_city_risk_profile(city_name)
         if _profile and _profile.get("metar_rounding"):
-            ai_features.append(f"⚠️ METAR特性: {_profile['metar_rounding']}")
+            ai_features.append(f"⚠️ METAR quirk: {_profile['metar_rounding']}")
     if wind_speed:
-        wind_dir = primary_current.get("wind_dir", "未知")
-        ai_features.append(f"🌬️ 当下风况: 约 {wind_speed}kt (方向 {wind_dir}°)。")
+        wind_dir = primary_current.get("wind_dir", "unknown")
+        ai_features.append(f"🌬️ Current wind: about {wind_speed}kt (direction {wind_dir} deg).")
     humidity = primary_current.get("humidity")
     if humidity and humidity > 80:
-        ai_features.append(f"💦 湿度极高 ({humidity}%)。")
+        ai_features.append(f"💦 Very high humidity ({humidity}%).")
 
     clouds = primary_current.get("clouds", [])
     if clouds:
         cover = clouds[-1].get("cover", "")
-        c_desc = {"OVC": "全阴", "BKN": "多云", "SCT": "散云", "FEW": "少云"}.get(cover, cover)
-        ai_features.append(f"☁️ 天空状况: {c_desc}。")
+        c_desc = {"OVC": "Overcast", "BKN": "Broken", "SCT": "Scattered", "FEW": "Few"}.get(cover, cover)
+        ai_features.append(f"☁️ Sky condition: {c_desc}.")
 
     wx_desc = primary_current.get("wx_desc")
     if wx_desc:
-        ai_features.append(f"🌧️ 天气现象: {wx_desc}。")
+        ai_features.append(f"🌧️ Weather phenomena: {wx_desc}.")
 
     max_temp_time_str = primary_current.get("max_temp_time", "")
     if max_so_far is not None and max_temp_time_str:
@@ -950,7 +950,7 @@ def analyze_weather_trend(
                     break
             if max_temp_rad < 50:
                 ai_features.append(
-                    f"🌙 动力事实: 最高温出现在低辐射时段 ({max_temp_time_str}, 辐射{max_temp_rad:.0f}W/m²)。"
+                    f"🌙 Dynamics: high occurred in a low-radiation window ({max_temp_time_str}, radiation {max_temp_rad:.0f} W/m2)."
                 )
         except Exception:
             pass
@@ -1049,10 +1049,10 @@ def calculate_prob_distribution(
         if n < min_possible_wu:
             continue
         if is_exact:
-            # 向下取整的概率区间为 [n, n + 1)
+            # Flooring probability interval is [n, n + 1)
             p = _norm_cdf(n + 1.0, mu, sigma) - _norm_cdf(n, mu, sigma)
         else:
-            # 常规四舍五入的概率区间为 [n - 0.5, n + 0.5)
+            # Standard rounding probability interval is [n - 0.5, n + 0.5)
             p = _norm_cdf(n + 0.5, mu, sigma) - _norm_cdf(n - 0.5, mu, sigma)
             
         if p > 0.01:

@@ -17,7 +17,6 @@ import {
   hasSupabasePublicEnv,
 } from "@/lib/supabase/client";
 import { getConfiguredSiteUrl, PRODUCTION_SITE_URL } from "@/lib/site-url";
-import { useI18n } from "@/hooks/useI18n";
 
 type Mode = "login" | "signup";
 
@@ -29,7 +28,6 @@ type LoginClientProps = {
 
 export function LoginClient({ nextPath, initialError, initialMode }: LoginClientProps) {
   const router = useRouter();
-  const { locale } = useI18n();
   const [mode, setMode] = useState<Mode>(initialMode ?? "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,90 +42,60 @@ export function LoginClient({ nextPath, initialError, initialMode }: LoginClient
   const siteOrigin =
     getConfiguredSiteUrl() ||
     (typeof window !== "undefined" ? window.location.origin : PRODUCTION_SITE_URL);
-  const isEn = locale === "en-US";
-  
+
   const copy = {
-    backHome: isEn ? "Back to Home" : "返回首页",
-    loginSubtitle: isEn
-      ? "Sign in to continue to your weather decision terminal."
-      : "登录后进入你的天气决策终端。",
-    signupSubtitle: isEn
-      ? "Create an account and get a one-time 3-day trial. No payment required first."
-      : "创建账号后自动开启一次 3 天试用，无需先付款。",
-    googleOneClick: isEn
-      ? "Continue with Google"
-      : "使用 Google 账号一键登录",
-    orGoogle: isEn ? "Or continue with Google" : "或使用 Google",
-    login: isEn ? "Sign In" : "登录",
-    signup: isEn ? "Sign Up" : "注册",
-    passwordLoginPlaceholder: isEn ? "Enter password" : "输入密码",
-    passwordSignupPlaceholder: isEn
-      ? "Set at least 6 characters"
-      : "设置至少 6 位密码",
-    loginSubmit: isEn ? "Enter PolyWeather Terminal" : "进入 PolyWeather 终端",
-    loginSubmitting: isEn ? "Signing in..." : "正在登录...",
-    signupSubmit: isEn ? "Create account and start trial" : "创建账号并领取试用",
-    signupSubmitting: isEn ? "Creating account..." : "正在创建账号...",
-    googleSubmitting: isEn ? "Connecting Google..." : "正在连接 Google...",
-    loginHint: isEn
-      ? "After signing in, your homepage will be personalized."
-      : "登录后将为您个性化定制首页数据",
-    signupHint: isEn
-      ? "By signing up, you agree to our Terms of Service."
-      : "注册即代表同意我们的服务条款",
-    realtime: isEn ? "Realtime data" : "实时数据",
-    highPrecision: isEn ? "High-precision forecast" : "高精度预测",
-    supabaseMissing: isEn
-      ? "Supabase is not configured. Sign-in is unavailable."
-      : "Supabase 未配置，无法使用登录",
-    needEmailPassword: isEn
-      ? "Please enter email and password."
-      : "请输入邮箱和密码",
-    signupCheckEmail: isEn
-      ? "Sign-up successful. Please verify your email before signing in."
-      : "注册成功，请检查邮箱并完成验证后登录。",
-    reset: isEn ? "Forgot password?" : "忘记密码？",
-    resetSent: isEn
-      ? "Reset link sent. Check your inbox."
-      : "重置链接已发送，请检查收件箱。",
-    resetPlaceholder: isEn ? "Enter your email to reset" : "输入邮箱以重置密码",
-    resendVerify: isEn
-      ? "Didn't receive the verification email? Sign up again with the same email to resend."
-      : "没收到验证邮件？用同一邮箱重新注册即可重发。",
-    loginFailedHint: isEn
-      ? "If you just signed up, please verify your email first. Check your inbox or spam folder."
-      : "如果刚注册，请先点击邮箱中的验证链接。检查收件箱或垃圾邮件。",
-    workEmail: isEn ? "Work email" : "工作邮箱",
-    password: isEn ? "Password" : "密码",
-    welcomeBack: isEn ? "Sign in to PolyWeather" : "登录 PolyWeather",
-    signUpTitle: isEn ? "Create your PolyWeather account" : "创建 PolyWeather 账号",
-    newToPoly: isEn ? "New to PolyWeather?" : "还没有 PolyWeather 账号？",
-    alreadyHave: isEn ? "Already have an account?" : "已经有账号了？",
-    termsAgreement: isEn
-      ? "By proceeding, you agree to the Privacy Policy and Terms & Conditions."
-      : "继续操作即代表您同意隐私政策与服务条款。",
-    desc: isEn
-      ? "Use the same terminal palette as the product: live temperature evidence, DEB paths, and settlement-source context in one calm workspace."
-      : "沿用终端界面的配色和信息密度：实时温度证据、DEB 路径和结算源背景放在一个安静工作台里。",
-    trusted: isEn ? "Trusted by industry professionals" : "深受行业决策人员信赖",
+    backHome: "Back to Home",
+    loginSubtitle: "Sign in to continue to your weather decision terminal.",
+    signupSubtitle: "Create an account and get a one-time 3-day trial. No payment required first.",
+    googleOneClick: "Continue with Google",
+    orGoogle: "Or continue with Google",
+    login: "Sign In",
+    signup: "Sign Up",
+    passwordLoginPlaceholder: "Enter password",
+    passwordSignupPlaceholder: "Set at least 6 characters",
+    loginSubmit: "Enter PolyWeather Terminal",
+    loginSubmitting: "Signing in...",
+    signupSubmit: "Create account and start trial",
+    signupSubmitting: "Creating account...",
+    googleSubmitting: "Connecting Google...",
+    loginHint: "After signing in, your homepage will be personalized.",
+    signupHint: "By signing up, you agree to our Terms of Service.",
+    realtime: "Realtime data",
+    highPrecision: "High-precision forecast",
+    supabaseMissing: "Supabase is not configured. Sign-in is unavailable.",
+    needEmailPassword: "Please enter email and password.",
+    signupCheckEmail: "Sign-up successful. Please verify your email before signing in.",
+    reset: "Forgot password?",
+    resetSent: "Reset link sent. Check your inbox.",
+    resetPlaceholder: "Enter your email to reset",
+    resendVerify:
+      "Didn't receive the verification email? Sign up again with the same email to resend.",
+    loginFailedHint:
+      "If you just signed up, please verify your email first. Check your inbox or spam folder.",
+    workEmail: "Work email",
+    password: "Password",
+    welcomeBack: "Log in to PolyWeather",
+    signUpTitle: "Create PolyWeather account",
+    newToPoly: "New to PolyWeather?",
+    alreadyHave: "Already have an account?",
+    termsAgreement:
+      "By proceeding, you agree to the Privacy Policy and Terms & Conditions.",
+    desc: "Use the same terminal palette as the product: live temperature evidence, DEB paths, and settlement-source context in one calm workspace.",
+    trusted: "Trusted by industry professionals",
   } as const;
   const submittingLabel = isLogin ? copy.loginSubmitting : copy.signupSubmitting;
   const googleSubmittingLabel = copy.googleSubmitting;
   const formSubtitle = isLogin ? copy.loginSubtitle : copy.signupSubtitle;
-  const accessHighlights = isEn
-    ? ["Live temperature charts", "DEB forecast path", "Runway and settlement alerts"]
-    : ["实时温度图表", "DEB 预测路径", "跑道与结算提醒"];
-  const sideStats = isEn
-    ? [
-        { label: "Trial", value: "3 days" },
-        { label: "Access", value: "Terminal" },
-        { label: "Signals", value: "Runway" },
-      ]
-    : [
-        { label: "试用", value: "3 天" },
-        { label: "入口", value: "终端" },
-        { label: "提醒", value: "跑道" },
-      ];
+  const accessHighlights = [
+    "Live temperature charts",
+    "DEB forecast path",
+    "Runway and settlement alerts",
+  ];
+  const sideStats = [
+    { label: "Trial", value: "3 days" },
+    { label: "Access", value: "Terminal" },
+    { label: "Signals", value: "Runway" },
+  ];
   const loadingSpinner = (
     <span
       aria-hidden="true"
@@ -305,12 +273,10 @@ export function LoginClient({ nextPath, initialError, initialMode }: LoginClient
 
         <div className="relative z-10 mt-12 max-w-md">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-200">
-            {isEn ? "Access Gate" : "终端入口"}
+            Access Gate
           </p>
           <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight text-white">
-            {isEn
-              ? "Sign in where the terminal starts."
-              : "从这里进入天气决策终端。"}
+            Sign in where the terminal starts.
           </h2>
           <p className="mt-4 text-sm leading-7 text-slate-300">
             {copy.desc}
@@ -330,7 +296,7 @@ export function LoginClient({ nextPath, initialError, initialMode }: LoginClient
             src="/static/web.webp"
             width="680"
             height="340"
-            alt={isEn ? "PolyWeather terminal preview" : "PolyWeather 终端预览"}
+            alt="PolyWeather terminal preview"
             className="aspect-[16/9] w-full object-cover object-top"
             decoding="async"
           />
@@ -349,9 +315,9 @@ export function LoginClient({ nextPath, initialError, initialMode }: LoginClient
         </div>
 
         <div className="relative z-10 mt-auto flex items-center justify-between border-t border-white/10 pt-5 text-[11px] text-slate-400">
-          <span>{isEn ? "Live charts" : "实时图表"}</span>
-          <span>{isEn ? "DEB path" : "DEB 路径"}</span>
-          <span>{isEn ? "Runway alerts" : "跑道提醒"}</span>
+          <span>Live charts</span>
+          <span>DEB path</span>
+          <span>Runway alerts</span>
         </div>
       </section>
 
@@ -392,7 +358,7 @@ export function LoginClient({ nextPath, initialError, initialMode }: LoginClient
             <div className="mb-6">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                {isLogin ? copy.loginSubmit : isEn ? "3-day trial" : "3 天试用"}
+                {isLogin ? copy.loginSubmit : "3-day trial"}
               </div>
               <h1 className="mb-2 text-2xl font-black tracking-tight text-slate-950">
                 {isLogin ? copy.welcomeBack : copy.signUpTitle}

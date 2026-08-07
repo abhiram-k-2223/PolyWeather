@@ -30,7 +30,6 @@ from src.utils.metrics import (
 )
 from src.database.db_manager import DBManager
 from src.database.runtime_state import get_state_storage_mode
-from src.payments import PAYMENT_CHECKOUT, PaymentCheckoutError  # noqa: F401
 from src.data_collection.city_registry import CITY_REGISTRY
 
 app = FastAPI(title="PolyWeather Map", version="1.0")
@@ -194,7 +193,6 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-_ENTITLEMENT_GUARD_ENABLED = _env_bool("POLYWEATHER_REQUIRE_ENTITLEMENT", False)
 _ENTITLEMENT_HEADER = "x-polyweather-entitlement"
 _ENTITLEMENT_TOKEN = (os.getenv("POLYWEATHER_BACKEND_ENTITLEMENT_TOKEN") or "").strip()
 _FORWARDED_SUPABASE_USER_ID_HEADER = "x-polyweather-auth-user-id"
@@ -245,112 +243,20 @@ def _bind_optional_supabase_identity(request: Request) -> None:
         return
     request.state.auth_user_id = identity.user_id
     request.state.auth_email = identity.email
-    request.state.auth_points = identity.points
     request.state.auth_created_at = identity.created_at
     from src.utils.online_tracker import record_activity
     record_activity(identity.user_id)
 
 
-def _resolve_auth_points(request: Request) -> int:
-    raw_points = getattr(request.state, "auth_points", 0)
-    try:
-        points = max(0, int(raw_points or 0))
-    except Exception:
-        points = 0
-
-    user_id = str(getattr(request.state, "auth_user_id", "") or "").strip()
-
-    if user_id:
-        try:
-            db_points = _account_db.get_points_by_supabase_user_id(user_id)
-            if db_points > points:
-                request.state.auth_points = db_points
-                points = db_points
-        except Exception as exc:
-            logger.warning(f"auth points fallback failed user_id={user_id}: {exc}")
-
-    if points <= 0:
-        email = str(getattr(request.state, "auth_email", "") or "").strip().lower()
-        if email:
-            try:
-                email_points = _account_db.get_points_by_supabase_email(email)
-                if email_points > points:
-                    request.state.auth_points = email_points
-                    points = email_points
-            except Exception as exc:
-                logger.warning(
-                    f"auth points email fallback failed email={email}: {exc}"
-                )
-
-    return points
-
-
-def _resolve_weekly_profile(request: Request) -> Dict[str, Any]:
-    user_id = str(getattr(request.state, "auth_user_id", "") or "").strip()
-    if not user_id:
-        return {"weekly_points": 0, "weekly_rank": None}
-    try:
-        profile = _account_db.get_weekly_profile_by_supabase_user_id(user_id)
-        return {
-            "weekly_points": int(profile.get("weekly_points") or 0),
-            "weekly_rank": profile.get("weekly_rank"),
-        }
-    except Exception as exc:
-        logger.warning(f"auth weekly profile fallback failed user_id={user_id}: {exc}")
-        return {"weekly_points": 0, "weekly_rank": None}
-
-
 def _assert_entitlement(request: Request) -> None:
-    if SUPABASE_ENTITLEMENT.enabled:
-        if _legacy_service_token_valid(request):
-            if _bind_forwarded_supabase_identity(request):
-                return
-            if not extract_bearer_token(request.headers.get("authorization")):
-                return
-        if not _SUPABASE_AUTH_REQUIRED:
-            _bind_optional_supabase_identity(request)
-            return
-        if not SUPABASE_ENTITLEMENT.configured:
-            raise HTTPException(
-                status_code=503,
-                detail="Supabase auth is enabled but SUPABASE_URL / SUPABASE_ANON_KEY is not configured",
-            )
+    """Bind optional Supabase identity without enforcing a subscription.
 
-        access_token = extract_bearer_token(request.headers.get("authorization"))
-        if not access_token:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-
-        identity = SUPABASE_ENTITLEMENT.get_identity(access_token)
-        if not identity:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        skip_subscription_gate = bool(
-            getattr(request.state, "skip_subscription_gate", False)
-        )
-        if (
-            not skip_subscription_gate
-            and not SUPABASE_ENTITLEMENT.has_active_subscription(identity.user_id)
-        ):
-            raise HTTPException(status_code=403, detail="Subscription required")
-
-        request.state.auth_user_id = identity.user_id
-        request.state.auth_email = identity.email
-        request.state.auth_points = identity.points
-        request.state.auth_created_at = identity.created_at
-        from src.utils.online_tracker import record_activity
-        record_activity(identity.user_id)
-        return
-
-    if not _ENTITLEMENT_GUARD_ENABLED:
-        return
-
-    if not _ENTITLEMENT_TOKEN:
-        raise HTTPException(
-            status_code=503,
-            detail="Entitlement guard is enabled but backend token is not configured",
-        )
-
-    if not _legacy_service_token_valid(request):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    The subscription paywall has been removed from the roadmap, so this
+    gate never rejects a request. Identity is bound when present so that
+    feedback, ops admin, and usage tracking can still resolve the user.
+    """
+    _bind_optional_supabase_identity(request)
+    return
 
 
 def _require_supabase_identity(request: Request) -> Dict[str, str]:
@@ -428,62 +334,6 @@ def _require_ops_admin(request: Request) -> Dict[str, str]:
     raise HTTPException(status_code=403, detail="ops admin required")
 
 
-class WalletChallengeRequest(BaseModel):
-    address: str = Field(..., min_length=8)
-
-
-class WalletVerifyRequest(BaseModel):
-    address: str = Field(..., min_length=8)
-    nonce: str = Field(..., min_length=6)
-    signature: str = Field(..., min_length=20)
-
-
-class WalletUnbindRequest(BaseModel):
-    address: str = Field(..., min_length=8)
-
-
-class CreatePaymentIntentRequest(BaseModel):
-    plan_code: str = Field(default="pro_monthly", min_length=2)
-    payment_mode: str = Field(default="strict")
-    allowed_wallet: Optional[str] = None
-    token_address: Optional[str] = None
-    chain_id: Optional[int] = None
-    use_points: bool = False
-    points_to_consume: Optional[int] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-
-class SubmitPaymentTxRequest(BaseModel):
-    tx_hash: str = Field(..., min_length=10)
-    from_address: Optional[str] = None
-
-
-class ValidatePaymentTxRequest(BaseModel):
-    tx_hash: str = Field(..., min_length=10)
-
-
-class ConfirmPaymentTxRequest(BaseModel):
-    tx_hash: Optional[str] = None
-
-
-class ReferralApplyRequest(BaseModel):
-    code: str = Field(..., min_length=3, max_length=32)
-
-
-class TelegramLoginRequest(BaseModel):
-    id: int
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    username: Optional[str] = None
-    photo_url: Optional[str] = None
-    auth_date: int
-    hash: str = Field(..., min_length=10)
-
-
-class TelegramBindTokenRequest(BaseModel):
-    token: str = Field(..., min_length=8)
-
-
 class AnalyticsEventRequest(BaseModel):
     event_type: str = Field(..., min_length=3, max_length=64)
     client_id: Optional[str] = Field(default=None, max_length=128)
@@ -502,11 +352,6 @@ class UserFeedbackRequest(BaseModel):
 class GrantPointsRequest(BaseModel):
     email: str = Field(..., min_length=3)
     points: int = Field(..., gt=0, le=100000)
-
-
-class FeedbackRewardRequest(BaseModel):
-    points: int = Field(..., gt=0, le=100000)
-    reason: str = Field(default="", max_length=500)
 
 
 def _sf(v) -> Optional[float]:
@@ -573,8 +418,6 @@ def _feature_flags_summary() -> Dict[str, Any]:
     return {
         "auth_enabled": bool(SUPABASE_ENTITLEMENT.enabled),
         "auth_required": bool(_SUPABASE_AUTH_REQUIRED),
-        "entitlement_guard_enabled": bool(_ENTITLEMENT_GUARD_ENABLED),
-        "payment_enabled": bool(getattr(PAYMENT_CHECKOUT, "enabled", False)),
         "state_storage_mode": get_state_storage_mode(),
     }
 
@@ -585,9 +428,6 @@ def _integration_summary() -> Dict[str, Any]:
         "supabase_configured": bool(SUPABASE_ENTITLEMENT.configured),
         "telegram_bot_configured": bool(
             (_config.get("telegram", {}) or {}).get("bot_token")
-        ),
-        "walletconnect_configured": bool(
-            os.getenv("NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID")
         ),
         "weather_sources": {
             "openweather": bool(weather_cfg.get("openweather_api_key")),

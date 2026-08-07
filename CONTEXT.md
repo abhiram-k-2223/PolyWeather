@@ -15,7 +15,7 @@ The product has three audiences:
 
 - **Retail users** (frontend at `polyweather.top`) — see live temperature charts, model consensus, probability distributions, DEB accuracy, and intraday meteorology commentary.
 - **Telegram subscribers** — receive daily weather briefings with DEB predictions, settlement probabilities, trend analysis, and payout alerts via a Telegram bot.
-- **Internal (operators)** — admin dashboard (`/ops`) for health monitoring, accuracy tracking, membership management, payment audit, and system config.
+- **Internal (operators)** — admin dashboard (`/ops`) for health monitoring, accuracy tracking, and system config.
 
 **Core differentiators vs. general-purpose weather APIs:**
 
@@ -35,7 +35,7 @@ PolyWeather/
 ├── src/                    # Python backend core
 │   ├── analysis/           # Prediction models (DEB, probability, evaluation)
 │   ├── async_infra/        # Async event loop, HTTP client, rate limiter, Redis
-│   ├── auth/               # Supabase entitlements, Telegram pricing
+│   ├── auth/               # Supabase identity binding
 │   ├── bot/                # Telegram bot orchestrator, signal dispatcher
 │   ├── data_collection/    # Weather data sources (40+ source adapters)
 │   │   └── sources/        # Individual source implementations
@@ -43,7 +43,6 @@ PolyWeather/
 │   ├── database/           # SQLite + RuntimeState persistence layer
 │   ├── models/             # Pydantic model definitions
 │   ├── onchain/            # On-chain contract interactions
-│   ├── payments/           # Smart contract checkout, confirm loop, audit
 │   ├── trading/            # Polymarket trading engine
 │   │   ├── engine/         # Risk engine, signal ingestion, order mgmt, position tracking
 │   │   ├── polymarket/     # CLOB client, Data API client, wallet, neg-risk adapter
@@ -58,7 +57,6 @@ PolyWeather/
 │   └── lib/                # Client utilities, Supabase helpers, chart utils
 ├── tests/                  # 60+ pytest test files
 ├── scripts/                # Maintenance scripts (backfill, backtest, migration)
-├── contracts/              # Solidity smart contracts (PolyWeatherCheckout V1/V2)
 ├── deploy/                 # Nginx config, Dockerfile, CI
 ├── docs/                   # Documentation (directory currently empty)
 └── data/                   # Runtime data (SQLite DB, JSON records)
@@ -193,7 +191,6 @@ The ops panel provides:
 - **Source health** (`get_ops_source_health`): Per-city freshness, latency, and status for all data sources.
 - **Observation collector status** (`get_ops_observation_collector_status`): Per-source/city collector health, cooldown, due times.
 - **Health check** (`get_ops_health_check`): Live ping to all 15+ external APIs (Supabase, Open-Meteo, METAR, KNMI, MADIS, Telegram, JMA, MGM, FMI, KMA, HKO, Singapore MSS, CWA, AMOS, AMSC AWOS, NOAA WRH).
-- **Payment risk, membership management, Telegram audit, billing risk** — full operations suite.
 
 ### 3.7 Backtesting Infrastructure
 
@@ -212,21 +209,13 @@ The `backtest_metar_calibrated_path.py` script implements:
 
 **Key pages:**
 - `/terminal` — Scan Terminal: Real-time temperature dashboard with city cards, hourly charts, probability buckets, DEB predictions, market scan filters.
-- `/ops/*` — Operations panel: Analytics, config, feedback, health, memberships, overview, payments, subscriptions, system, Telegram audit, training accuracy, truth history, users, view-logs.
-- `/account` — Account center: Subscription management, points, wallet bind.
+- `/ops/*` — Operations panel: Analytics, config, feedback, health, overview, system, training accuracy, truth history, view-logs.
+- `/account` — Account center: Supabase identity, feedback, Telegram links.
 - `/docs` — Documentation pages rendered from MDX content.
 
-### 3.9 Payments & Subscriptions
+### 3.9 Free Access Model
 
-**Contracts:** `contracts/PolyWeatherCheckout.sol` (V1), `PolyWeatherCheckoutV2.sol`  
-**Files:** `src/payments/confirm_loop.py`, `contract_checkout.py`, `contract_audit.py`
-
-Polygon-based USDC payment flow:
-1. User initiates payment via smart contract checkout.
-2. `ConfirmLoop` polls for on-chain confirmation.
-3. `ContractAudit` verifies transaction integrity.
-4. Supabase subscription records updated on confirmation.
-5. Points system for loyalty rewards, referral bonuses.
+The product is open to all users without a subscription, paywall, points, or referral system. Supabase provides optional identity binding (for feedback and ops admin); the trading stack remains API-driven via the Telegram bot and the scan terminal.
 
 ### 3.10 Telegram Bot
 
@@ -353,7 +342,6 @@ Given PolyWeather has ~40 cities × ~100-200 settled days = 4,000-8,000 total tr
 | **State storage** | SQLite (runtime_state.py) | JSON file, PostgreSQL | Single-file deployment, zero infrastructure, fast random access, ACID transactions. |
 | **Async infra** | asyncio + ThreadPoolExecutor | Celery, Redis Queue | Lightweight, co-located with FastAPI, sufficient for the IO-bound weather fetching workload. |
 | **Auth** | Supabase | Auth0, Firebase, custom JWT | Free tier for early stage, built-in social login and RLS, good Supabase SDK for Next.js. |
-| **Payments** | Polygon USDC smart contract | Stripe, PayPal | On-chain settlement matches the Polymarket user base; USDC is the native denomination of prediction markets. |
 
 ---
 

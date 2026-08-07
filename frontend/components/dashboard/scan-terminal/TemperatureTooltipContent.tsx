@@ -141,7 +141,7 @@ function buildTooltipProbabilityRows(
   if (mu !== null) {
     rows.push({
       key: "legacy_probability_mu",
-      label: isEn ? "Gaussian μ" : "高斯 μ",
+      label: isEn ? "Gaussian μ" : "Gaussian μ",
       value: `${mu.toFixed(1)}${tempSymbol}`,
       color: "#8b5cf6",
     });

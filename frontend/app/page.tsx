@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { InstitutionalLandingPage } from "@/components/landing/InstitutionalLandingPage";
 
 export const metadata: Metadata = {
-  title: "PolyWeather | Institutional Weather Signal Intelligence",
+  title: "PolyWeather | Weather Signal Intelligence for Temperature Markets",
   description:
-    "PolyWeather is a paid professional weather-signal intelligence terminal with METAR evidence, DEB forecast blending, and structured decision context.",
+    "PolyWeather is a weather-signal intelligence terminal with METAR evidence, DEB forecast blending, and structured decision context.",
   other: {
     preconnect: "https://api.polyweather.top",
   },
@@ -37,29 +37,10 @@ export default async function HomePage({
     "@type": "WebApplication",
     name: "PolyWeather",
     description:
-      "Paid professional weather-signal intelligence terminal with METAR evidence, DEB forecast blending, and structured decision context.",
+      "Weather-signal intelligence terminal with METAR evidence, DEB forecast blending, and structured decision context.",
     url: "https://polyweather.top",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    offers: [
-      {
-        "@type": "Offer",
-        name: "Pro monthly",
-        price: "29.90",
-        priceCurrency: "USD",
-        description:
-          "Pro subscription for 30 days. Referral users pay 20.00 USD-equivalent USDC for the first month.",
-        availability: "https://schema.org/InStock",
-      },
-      {
-        "@type": "Offer",
-        name: "Pro quarterly",
-        price: "79.90",
-        priceCurrency: "USD",
-        description: "Pro subscription for 90 days.",
-        availability: "https://schema.org/InStock",
-      },
-    ],
   };
 
   return (

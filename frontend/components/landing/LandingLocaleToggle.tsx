@@ -35,10 +35,10 @@ export function LandingLocaleToggle({ locale }: { locale: LandingLocale }) {
       onClick={toggleLocale}
       disabled={isPending}
       className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-1 text-xs font-semibold text-slate-500 shadow-sm hover:border-slate-300 disabled:cursor-wait disabled:opacity-70"
-      aria-label={isEn ? "Switch language" : "切换语言"}
+      aria-label={isEn ? "Switch language" : "Switch Language"}
     >
       <span className={`rounded px-2 py-1 ${!isEn ? "bg-slate-900 text-white" : ""}`}>
-        中
+        ZH
       </span>
       <span className={`rounded px-2 py-1 ${isEn ? "bg-slate-900 text-white" : ""}`}>
         EN

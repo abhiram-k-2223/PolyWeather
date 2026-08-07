@@ -83,9 +83,9 @@ function runwaySeriesKey(rwy: string) {
     .join("_")}`;
 }
 
-function runwaySeriesLabel(rwy: string, isSettlement: boolean, isEn: boolean) {
+function runwaySeriesLabel(rwy: string, isSettlement: boolean) {
   if (!isSettlement) return rwy;
-  return `${rwy} ${isEn ? "Settlement Runway" : "结算跑道"}`;
+  return `${rwy} Settlement Runway`;
 }
 
 function isTemperatureSeriesVisibleByDefault(city: string, seriesKey: string) {
@@ -1654,32 +1654,32 @@ function getLiveObservationLabels(
     && !isHKO && !isShenzhen && !isTokyo && !isSingapore && !isParis && !isTaipei
     && hasRealStationNetwork;
 
-  const runwayHeaderLabel = isShenzhen ? "天文台实测 (10分钟)"
-    : isHKO ? "参考站点 (1分钟)"
-    : isTokyo ? "机场气象站 (10分钟)"
-    : isSingapore ? "航站楼温度"
-    : isParis ? "官方机场观测 (15分钟)"
-    : isTaipei ? "CWA (10分钟)"
-    : isWeatherStation ? "气象站实测"
-    : isRunwaySensorCity ? `跑道实测 (${isAmscRunwayCity ? "3分钟" : "1分钟"})`
-    : "机场报文";
+  const runwayHeaderLabel = isShenzhen ? "HKO Live (10m)"
+    : isHKO ? "Reference Station (1m)"
+    : isTokyo ? "Airport Weather Station (10m)"
+    : isSingapore ? "Terminal Temperature"
+    : isParis ? "Official Airport Obs (15m)"
+    : isTaipei ? "CWA (10m)"
+    : isWeatherStation ? "Weather station live"
+    : isRunwaySensorCity ? `Runway live (${isAmscRunwayCity ? "3min" : "1min"})`
+    : "Airport METAR";
 
-  const metarHeaderLabel = (isShenzhen || isHKO) ? "天文台实测 (10分钟)"
-    : "METAR 结算 (30分钟)";
+  const metarHeaderLabel = (isShenzhen || isHKO) ? "HKO Live (10m)"
+    : "METAR Settlement (30m)";
 
-  const runwayHighLabel = isShenzhen ? "天文台实测"
-    : isHKO ? "参考站点"
-    : isTokyo ? "机场气象站"
-    : isSingapore ? "航站楼"
-    : isParis ? "官方机场观测"
+  const runwayHighLabel = isShenzhen ? "HKO Live"
+    : isHKO ? "Reference Station"
+    : isTokyo ? "Airport Weather Station"
+    : isSingapore ? "Terminal"
+    : isParis ? "Official Airport Obs"
     : isTaipei ? "CWA"
-    : isWeatherStation ? "气象站"
-    : isRunwaySensorCity ? "跑道实测"
-    : "机场报文";
+    : isWeatherStation ? "Weather station"
+    : isRunwaySensorCity ? "Runway"
+    : "Airport METAR";
 
-  const metarHighLabel = isShenzhen ? "天文台"
-    : isHKO ? "天文台"
-    : "METAR 官方";
+  const metarHighLabel = isShenzhen ? "HKO"
+    : isHKO ? "HKO"
+    : "Official METAR";
 
   return {
     isHKO,
@@ -1876,7 +1876,7 @@ function buildRunwayHistorySeries(
         const isSettlement = isSettlementRunway(row, normalizedRwy);
         return {
           key: runwaySeriesKey(normalizedRwy),
-          label: runwaySeriesLabel(normalizedRwy, isSettlement, isEn),
+          label: runwaySeriesLabel(normalizedRwy, isSettlement),
           rwy: normalizedRwy,
           isSettlement,
           color: isSettlement ? "#009688" : RUNWAY_LINE_COLORS[index % RUNWAY_LINE_COLORS.length],
@@ -1950,7 +1950,7 @@ function buildRunwayHistorySeries(
       if (values.length < minPoints) return null;
       return {
         key: runwaySeriesKey(rwy),
-        label: runwaySeriesLabel(rwy, isSettlement, isEn),
+        label: runwaySeriesLabel(rwy, isSettlement),
         rwy,
         isSettlement,
         color: isSettlement ? "#009688" : RUNWAY_LINE_COLORS[index % RUNWAY_LINE_COLORS.length],
@@ -2412,7 +2412,7 @@ function buildFullDayChartData(
   if (maxVals.some((v) => v !== null)) {
     series.push({
       key: "runway_max",
-      label: isEn ? "Runway Max" : "跑道最高温",
+      label: isEn ? "Runway Max" : "Runway Max",
       source: "Runway Max",
       color: "#009688",
       featured: true,

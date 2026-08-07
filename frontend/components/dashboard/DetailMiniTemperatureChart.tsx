@@ -10,7 +10,7 @@ import type { CityDetail } from "@/lib/dashboard-types";
 export function DetailMiniTemperatureChart({ detail }: { detail: CityDetail }) {
   const { locale } = useI18n();
   const chartData = useMemo(
-    () => getTemperatureChartData(detail, locale),
+    () => getTemperatureChartData(detail),
     [detail, locale],
   );
   const forecastLabel = locale === "en-US" ? "DEB baseline" : "DEB 原始路径";

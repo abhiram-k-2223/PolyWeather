@@ -11,10 +11,10 @@ type ConversionBase = {
 };
 
 const PAID_CONVERSION_BASES: ConversionBase[] = [
-  { key: "trial_created", label: "试用" },
-  { key: "signup_success", label: "注册" },
-  { key: "enter_terminal", label: "终端" },
-  { key: "landing_view", label: "访客" },
+  { key: "trial_created", label: "Trial" },
+  { key: "signup_success", label: "Signup" },
+  { key: "enter_terminal", label: "Terminal" },
+  { key: "landing_view", label: "Visitors" },
 ];
 
 function finiteNonNegative(value: unknown) {
@@ -47,14 +47,14 @@ export function getOpsPaidConversionKpi(steps: OpsFunnelStep[]) {
   const visitorRate = landing > 0 ? formatRate(paid, landing) : "—";
   const visitorContext =
     base && base.key !== "landing_view" && visitorRate !== "—"
-      ? ` · 访客 ${visitorRate}`
+      ? ` · Visitors ${visitorRate}`
       : "";
 
   return {
     rateLabel: formatRate(paid, denominator),
     subLabel: base
       ? `${base.label} ${denominator} → ${paid}${visitorContext}`
-      : `支付 ${paid}`,
+      : `Paid ${paid}`,
     numerator: paid,
     denominator,
     denominatorKey: base?.key ?? null,

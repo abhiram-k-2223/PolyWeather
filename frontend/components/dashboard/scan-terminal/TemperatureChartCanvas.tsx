@@ -395,7 +395,7 @@ function TemperatureChartCanvasComponent({
         {shouldShowUnavailableState && (
           <div className="absolute inset-0 z-10 grid place-items-center px-4 text-center">
             <div className="max-w-[260px] rounded border border-amber-200 bg-amber-50/95 px-3 py-2 text-[11px] font-semibold text-amber-700 shadow-sm">
-              <div>{isEn ? "Detail temporarily unavailable" : "详情暂不可用"}</div>
+              <div>{isEn ? "Details temporarily unavailable" : "详情暂不可用"}</div>
               <button
                 type="button"
                 onClick={onRetryDetail}

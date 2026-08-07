@@ -4,6 +4,9 @@
 # Scratch / temp scripts
 scratch/
 
+# Generated graph output
+graphify-out/
+
 # Data and Logs
 data/*.db
 data/*.db-*

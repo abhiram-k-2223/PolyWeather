@@ -31,20 +31,15 @@ export function runTests() {
     "ops funnel API client must preserve the full standard funnel and expose diagnostics/traffic dimensions",
   );
   assert(
-    analyticsPage.includes("落地页访问") &&
-      analyticsPage.includes("进入终端") &&
-      analyticsPage.includes("注册成功") &&
-      analyticsPage.includes("鉴权降级") &&
-      analyticsPage.includes("来源与设备") &&
+    analyticsPage.includes("Landing page visits") &&
+      analyticsPage.includes("Enter terminal") &&
+      analyticsPage.includes("Registration success") &&
+      analyticsPage.includes("Auth degraded") &&
+      analyticsPage.includes("Source & device") &&
       analyticsPage.includes("paymentSuccess?.count") &&
-      !analyticsPage.includes("总注册") &&
-      !analyticsPage.includes("点击高级功能"),
+      !analyticsPage.includes("Total registration") &&
+      !analyticsPage.includes("Click advanced features"),
     "ops analytics page must show the real funnel semantics instead of stale index-based labels",
-  );
-  assert(
-    overviewPage.includes("stepByKey.payment_success?.count") &&
-      !overviewPage.includes("steps[5]?.count"),
-    "ops overview must derive paid conversion from payment_success by key, not from a brittle funnel index",
   );
   assert(
     appAnalytics.includes("referrer: document.referrer") &&
@@ -52,11 +47,5 @@ export function runTests() {
       analyticsRoute.includes("cf-ipcountry") &&
       analyticsRoute.includes("user_agent"),
     "client analytics events must carry source, country, and device metadata for acquisition analysis",
-  );
-  assert(
-    authMeRoute.includes('event_type: "degraded_auth_profile"') &&
-      authMeRoute.includes("response_mode") &&
-      authMeRoute.includes("trackAuthDiagnosticEvent"),
-    "auth/me fallback paths must emit degraded_auth_profile diagnostics for ops monitoring",
   );
 }
