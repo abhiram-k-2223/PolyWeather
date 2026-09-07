@@ -119,7 +119,7 @@ The trading engine is a **complete but greenfield** module — the architecture 
 - Thunderstorm/heavy rain/snow keywords → BUY signals.
 - Analysis probability -> signal direction (above 65 → BUY, below 35 → SELL).
 
-**Position sizing (current):** `_compute_position_size()` in `trading_engine.py` is a simple `base * confidence` linear formula. This is where **Quarter Kelly** will replace the current heuristic.
+**Position sizing (current):** `_compute_position_size()` in `trading_engine.py` uses Quarter Kelly (`compute_kelly_size_from_signal` in `src/trading/engine/kelly_sizing.py`) with `confidence` as the model-probability fallback.
 
 **Risk engine:**
 - `RiskConfig` — max position size ($500), max total exposure ($5,000), max 10 orders, max 50 trades/day, min 0.6 confidence, 300s cooldown after loss, 15% max drawdown, 50 bps max slippage.
@@ -368,7 +368,7 @@ Given PolyWeather has ~40 cities × ~100-200 settled days = 4,000-8,000 total tr
 | Position tracker | ✅ Complete | P&L, exposure, sync |
 | Risk engine | ✅ Complete | Hard limits, cooldown, drawdown |
 | Signal ingestion | ⚠️ Basic | Threshold-based; to be upgraded with Platt probabilities |
-| Position sizing | ❌ Heuristic | To be replaced with Quarter Kelly |
+| Position sizing | ✅ Quarter Kelly | `compute_kelly_size_from_signal`, confidence fallback |
 | Live trading | ❌ Disabled | `POLYWEATHER_TRADING_ENABLED=false` by default |
 
 ### Data Pipeline Health
@@ -422,9 +422,9 @@ On push to `main`:
 ## 8. Next Steps / Immediate Action Items
 
 1. **Priority 1 — DEB enhancements:** Implement seasonal weight profiles, multi-horizon weights, and per-bucket adaptive bias correction.
-2. **Priority 2 — Platt calibration:** Extract training features per bucket, train `LogisticRegression`, run shadow probabilities, compare Brier scores, then switch.
-3. **Priority 3 — Quarter Kelly:** Replace `_compute_position_size()` with `QuarterKelly * bankroll`, add bankroll tracking to `RiskEngine`, enforce Kelly-derived caps.
-4. **Priority 4 — Backtester upgrade:** Build reusable framework with `Strategy` interface, portfolio sim, walk-forward engine, and risk metrics.
+2. **Priority 2 — Platt calibration:** `src/analysis/platt_calibration.py` + `scripts/fit_platt_calibration.py` exist; next is shadow-probability comparison on live data, then switch.
+3. **Priority 3 — Quarter Kelly:** Done in engine (`compute_kelly_size_from_signal`); remaining is bankroll tracking in `RiskEngine` and Kelly-derived caps.
+4. **Priority 4 — Backtester upgrade:** Reusable framework exists (`scripts/backtester/`); `scripts/backtest_real_polymarket.py` adds the real-price path — synthetic records in `build_openmeteo_backtest_records.py` must not be presented as performance.
 5. **Validation:** Run `backtest_deb_versions.py` after each DEB change, compare version metrics, commit only if guarded calibration beats raw.
 6. **Frontend:** Add probability calibration chart to ops training page; add Kelly position size display to trading status.
 

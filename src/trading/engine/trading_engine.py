@@ -59,6 +59,11 @@ class EngineConfig:
     # ICAO -> (condition_id, token_id)
     city_to_market_map: dict[str, tuple[str, str]] = field(default_factory=dict)
 
+    # Paper-trading cash baseline used by _estimate_portfolio_value() when
+    # no live CLOB balance has been cached yet. Explicitly a paper figure —
+    # live trading must call refresh_portfolio_from_clob() first.
+    paper_base_usdc: float = 10000.0
+
 
 class TradingEngine:
     """Main trading engine — orchestrates the full pipeline.
@@ -102,14 +107,21 @@ class TradingEngine:
         self._signal_ingestor = SignalIngestor()
         self._signal_callback = signal_callback
 
+        # Feed verified order closures into risk accounting so the daily
+        # trade limit and post-loss cooldown actually engage.
+        self._order_manager.on_order_closed = self._on_order_closed
+
         # Register markets
         for icao, (cond_id, tok_id) in self._config.city_to_market_map.items():
             self._signal_ingestor.register_market(icao, cond_id, tok_id)
 
         # Background loop state
         self._running = False
-        self._loop_task: Optional[asyncio.Task] = None
+        self._loop_task: Optional[Any] = None
         self._last_reconcile: float = 0.0
+        # Last live cash balance fetched from the CLOB (None = not fetched
+        # yet; portfolio estimates fall back to paper_base_usdc).
+        self._cached_cash: Optional[float] = None
         self._stats: dict[str, Any] = {
             "signals_processed": 0,
             "orders_placed": 0,
@@ -160,6 +172,56 @@ class TradingEngine:
     # Public API (called from FastAPI or collector)
     # ------------------------------------------------------------------
 
+    def _on_order_closed(self, order: TrackedOrder) -> None:
+        """Risk accounting for verified order closures.
+
+        MATCHED fills open a position in the tracker (cost basis for
+        exposure/P&L); settlement PnL itself is recorded later via
+        :meth:`settle_matched_position`, which is the path that feeds
+        real PnL into ``RiskEngine.record_trade`` and drives the loss
+        cooldown. CANCELLED orders only advance the daily trade counter.
+        """
+        try:
+            if order.state == OrderState.MATCHED and order.filled_size > 0:
+                self._position_tracker.open_position(
+                    condition_id=order.condition_id,
+                    token_id=order.token_id,
+                    side="YES" if order.side == "BUY" else "NO",
+                    size=order.filled_size,
+                    entry_price=order.avg_fill_price or order.price,
+                    metadata={"local_id": order.local_id},
+                )
+                # Settlement unknown yet: count the trade without
+                # fabricating PnL.
+                self._risk_engine.record_trade(0.0)
+            else:
+                self._risk_engine.record_trade(0.0)
+        except Exception as exc:
+            logger.warning("Failed to record closed order %s: %s", order.local_id, exc)
+
+    def settle_matched_position(self, token_id: str, payout_per_share: float) -> float:
+        """Settle a filled position and record realized PnL for risk.
+
+        Args:
+            token_id: Outcome token of the filled position.
+            payout_per_share: Settlement payout per share (1.0 win / 0.0 loss).
+
+        Returns the realized PnL in USDC (0.0 if no such position).
+        """
+        pos = self._position_tracker.close_position(token_id)
+        if pos is None:
+            return 0.0
+        if pos.side == "YES":
+            realized = (payout_per_share - pos.avg_entry_price) * pos.size
+        else:
+            realized = (pos.avg_entry_price - payout_per_share) * pos.size
+        self._risk_engine.record_trade(realized)
+        logger.info(
+            "Settled %s: payout=%.2f realized PnL=%.2f",
+            token_id[:10], payout_per_share, realized,
+        )
+        return realized
+
     async def process_signal(self, signal: TradeSignal) -> Optional[TrackedOrder]:
         """Process a single trade signal: risk check -> place order.
 
@@ -179,6 +241,14 @@ class TradingEngine:
         token_id = signal.token_id
         if not token_id:
             token_id = self._resolve_token_id(signal.condition_id)
+        if not token_id:
+            logger.warning(
+                "Signal for condition %s has no token_id and no registered "
+                "mapping — rejecting (refusing to place token-less order)",
+                signal.condition_id[:10],
+            )
+            self._stats["orders_failed"] += 1
+            return None
 
         # -- risk check --
         if self._config.trade_on_signals:
@@ -199,6 +269,12 @@ class TradingEngine:
 
         side = "BUY" if signal.direction == SignalDirection.BUY else "SELL"
         size = signal.size or self._compute_position_size(signal)
+        if size <= 0:
+            logger.info(
+                "Signal for %s sized to 0 by Kelly (no edge) — skipping order",
+                signal.condition_id[:10],
+            )
+            return None
 
         order = await self._order_manager.place_order(
             condition_id=signal.condition_id,
@@ -312,32 +388,74 @@ class TradingEngine:
     # ------------------------------------------------------------------
 
     def _resolve_token_id(self, condition_id: str) -> str:
-        """Resolve a token ID for a condition.
+        """Resolve a token ID for a condition from registered mappings.
 
-        For now returns empty — in production this would look up
-        the market's outcome tokens via the Data API.
+        Checks the engine config map first, then the signal ingestor's
+        condition -> token registry. Returns "" when unmapped — callers
+        must reject the signal rather than placing a token-less order.
         """
-        # TODO: Real token resolution via DataAPIClient or local cache
-        return ""
+        for _icao, (cond_id, tok_id) in self._config.city_to_market_map.items():
+            if cond_id == condition_id and tok_id:
+                return tok_id
+        return self._signal_ingestor.get_token_id(condition_id)
 
     def _compute_position_size(self, signal: TradeSignal) -> float:
-        """Compute the position size based on confidence and risk config.
+        """Compute Quarter Kelly position size, capped by risk config.
 
-        Higher confidence = larger position, capped by max_position_size.
+        Uses the signal's model_probability metadata when present,
+        falling back to confidence. Returns 0.0 when there is no edge.
         """
-        base = 100.0
-        confidence_mult = signal.confidence  # 0–1
-        raw_size = base * confidence_mult
-        return min(raw_size, self._config.risk.max_position_size_usdc)
+        from .kelly_sizing import compute_kelly_size_from_signal
+
+        bankroll = self._estimate_portfolio_value()
+        model_probability = 0.0
+        try:
+            model_probability = float(signal.metadata.get("model_probability", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            model_probability = 0.0
+        size = compute_kelly_size_from_signal(
+            model_probability=model_probability,
+            confidence=signal.confidence,
+            direction=signal.direction.value,
+            target_price=signal.target_price,
+            bankroll=bankroll,
+            max_position_size=self._config.risk.max_position_size_usdc,
+        )
+        return min(size, self._config.risk.max_position_size_usdc)
+
+    async def refresh_portfolio_from_clob(self) -> float:
+        """Refresh cached cash + positions from the CLOB (live trading).
+
+        Returns the resulting portfolio value. Failures degrade
+        gracefully to the last cached/paper estimate.
+        """
+        try:
+            balance = await self._clob.get_balance()
+            for key in ("balance", "cash", "usdc", "available"):
+                try:
+                    self._cached_cash = float(balance.get(key))  # type: ignore[union-attr]
+                    break
+                except (TypeError, ValueError, AttributeError):
+                    continue
+            positions = await self._clob.get_positions()
+            items = positions.get("data", positions if isinstance(positions, list) else [])
+            if isinstance(items, list):
+                self._position_tracker.sync_from_clob_response(items)
+        except Exception as exc:
+            logger.warning("CLOB portfolio refresh failed, using cached estimate: %s", exc)
+        return self._estimate_portfolio_value()
 
     def _estimate_portfolio_value(self) -> float:
         """Estimate total portfolio value (cash + open positions).
 
-        In production this would query the CLOB balance endpoint.
+        Cash is the last CLOB balance from refresh_portfolio_from_clob(),
+        falling back to the explicit paper-trading baseline
+        (paper_base_usdc) — never a silent magic constant.
         """
+        cash = self._cached_cash if self._cached_cash is not None else self._config.paper_base_usdc
         exposure = self._position_tracker.get_total_exposure()
         pnl = self._position_tracker.get_total_unrealized_pnl()
-        return exposure + pnl + 10000.0  # placeholder base
+        return cash + exposure + pnl
 
     def _condition_exposure(self, condition_id: str) -> float:
         """Compute current exposure to a specific condition."""

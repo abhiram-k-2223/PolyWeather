@@ -289,6 +289,9 @@ class WeatherDataCollector(OpenMeteoCacheMixin, SettlementSourceMixin, MetarSour
                 "http://127.0.0.1:8000/api/internal/collector-patch",
             )
         ).strip()
+        self.collector_patch_token = str(
+            os.getenv("POLYWEATHER_COLLECTOR_PATCH_TOKEN", "") or ""
+        ).strip()
         self._last_emitted_temperature_patch: Dict[str, tuple[float, str]] = {}
         self._temperature_patch_lock = threading.Lock()
         self._load_open_meteo_disk_cache()
@@ -391,12 +394,18 @@ class WeatherDataCollector(OpenMeteoCacheMixin, SettlementSourceMixin, MetarSour
         backoff_sec = max(0.0, _env_float("POLYWEATHER_COLLECTOR_PATCH_POST_BACKOFF_SEC", 0.25))
 
         last_error: Optional[BaseException] = None
+        post_kwargs: Dict[str, Any] = {}
+        if self.collector_patch_token:
+            post_kwargs["headers"] = {
+                "x-polyweather-collector-token": self.collector_patch_token
+            }
         for attempt in range(1, attempts + 1):
             try:
                 response = requests.post(
                     self.collector_patch_endpoint,
                     json=payload,
                     timeout=timeout_sec,
+                    **post_kwargs,
                 )
                 status_code = int(getattr(response, "status_code", 200) or 200)
                 if 200 <= status_code < 300:

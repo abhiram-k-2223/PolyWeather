@@ -101,18 +101,31 @@ class SignalIngestor:
                 condition IDs. Loaded from config if not provided.
         """
         self._city_to_market: dict[str, str] = city_to_market_map or {}
+        self._condition_to_token: dict[str, str] = {}
         self._signals: list[TradeSignal] = []
+        # In-memory signal history must stay bounded; the process ingests
+        # observations on a loop and would otherwise grow this list forever.
+        self._max_signals = 1000
 
     def register_market(self, icao: str, condition_id: str, token_id: str) -> None:
         """Register a Polymarket market linked to a weather station."""
         self._city_to_market[icao] = condition_id
-        # We store a mapping from condition -> token_id in metadata
+        if token_id:
+            self._condition_to_token[condition_id] = token_id
         logger.info(
             "Registered market: %s -> condition=%s token=%s",
             icao,
             condition_id,
             token_id,
         )
+
+    def get_token_id(self, condition_id: str) -> str:
+        """Return the registered outcome token for a condition, or ""."""
+        return self._condition_to_token.get(condition_id, "")
+
+    def get_condition_id(self, icao: str) -> str:
+        """Return the registered condition ID for an ICAO station, or ""."""
+        return self._city_to_market.get(icao, "")
 
     # ------------------------------------------------------------------
     # Ingestion methods
@@ -142,7 +155,9 @@ class SignalIngestor:
         # -- precipitation / storm ------------------------------------
         signals.extend(self._check_precipitation(snapshot, condition_id))
 
-        self._signals.extend(signals)
+        if signals:
+            self._signals.extend(signals)
+            del self._signals[:-self._max_signals]
         logger.info(
             "Ingested %d signals from %s (%s)",
             len(signals),
@@ -190,7 +205,9 @@ class SignalIngestor:
             if s:
                 signals.append(s)
 
-        self._signals.extend(signals)
+        if signals:
+            self._signals.extend(signals)
+            del self._signals[:-self._max_signals]
         return signals
 
     # ------------------------------------------------------------------

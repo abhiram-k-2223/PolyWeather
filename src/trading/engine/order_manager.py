@@ -26,6 +26,9 @@ class OrderState(Enum):
     CANCELLED = "CANCELLED"
     FAILED = "FAILED"
     EXPIRED = "EXPIRED"
+    # Order vanished from the remote OPEN list but fills could not be
+    # verified. Excluded from exposure and P&L until confirmed.
+    CLOSED_UNVERIFIED = "CLOSED_UNVERIFIED"
 
 
 @dataclass
@@ -77,6 +80,10 @@ class OrderManager:
         self._storage = storage  # optional TradeStore for persistence
         self._orders: dict[str, TrackedOrder] = {}  # local_id -> order
         self._next_id: int = 0
+        # Optional hook invoked when an order reaches a terminal state with
+        # verified outcome (MATCHED or CANCELLED). The TradingEngine wires
+        # this to risk accounting so daily limits/cooldowns actually fire.
+        self.on_order_closed: Optional[Any] = None
 
     # ------------------------------------------------------------------
     # Order lifecycle
@@ -174,6 +181,11 @@ class OrderManager:
     async def reconcile(self) -> int:
         """Fetch open orders from the CLOB and update local state.
 
+        An order missing from the remote OPEN list may have been filled,
+        cancelled, or expired. Verify via fills before claiming MATCHED;
+        if fills cannot be fetched, mark CLOSED_UNVERIFIED instead of
+        fabricating a win.
+
         Returns the number of mismatches found and corrected.
         """
         try:
@@ -186,17 +198,88 @@ class OrderManager:
         remote_orders = remote.get("data", [])
         remote_ids = {o.get("id") for o in remote_orders if o.get("id")}
 
-        for local_order in self._orders.values():
-            if local_order.order_id and local_order.order_id not in remote_ids:
-                if local_order.state == OrderState.OPEN:
-                    # Order is no longer open on the CLOB — it may have been
-                    # filled, cancelled by another session, or expired.
-                    # Check fills to determine.
+        vanished = [
+            local_order
+            for local_order in self._orders.values()
+            if local_order.order_id
+            and local_order.order_id not in remote_ids
+            and local_order.state == OrderState.OPEN
+        ]
+        if not vanished:
+            return 0
+
+        fills_by_token_side: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        fills_fetch_failed = False
+        try:
+            fills_response = await self._clob.get_fills(limit=100)
+            for fill in fills_response.get("data", []):
+                key = (
+                    str(fill.get("asset_id") or fill.get("token_id") or ""),
+                    str(fill.get("side") or "").upper(),
+                )
+                fills_by_token_side.setdefault(key, []).append(fill)
+        except Exception as exc:
+            logger.warning(
+                "Reconciliation could not fetch fills (%s); "
+                "vanished orders will be marked CLOSED_UNVERIFIED",
+                exc,
+            )
+            fills_fetch_failed = True
+
+        for local_order in vanished:
+            now = datetime.now(timezone.utc)
+            if fills_fetch_failed:
+                local_order.state = OrderState.CLOSED_UNVERIFIED
+                local_order.error = "removed from CLOB; fill verification unavailable"
+                logger.warning(
+                    "Order %s no longer open — marked CLOSED_UNVERIFIED",
+                    local_order.local_id,
+                )
+            else:
+                matched_fills = fills_by_token_side.get(
+                    (local_order.token_id, local_order.side), []
+                )
+                if matched_fills:
+                    total_size = sum(
+                        float(f.get("size") or 0.0) for f in matched_fills
+                    )
+                    notional = sum(
+                        float(f.get("size") or 0.0) * float(f.get("price") or 0.0)
+                        for f in matched_fills
+                    )
                     local_order.state = OrderState.MATCHED
-                    mismatches += 1
+                    local_order.matched_at = now
+                    local_order.filled_size = total_size
+                    local_order.avg_fill_price = (
+                        notional / total_size if total_size > 0 else None
+                    )
                     logger.info(
-                        "Order %s no longer open — marked MATCHED",
+                        "Order %s verified MATCHED: %.4f @ %s",
                         local_order.local_id,
+                        total_size,
+                        local_order.avg_fill_price,
+                    )
+                else:
+                    # Gone from OPEN with zero fills — cancelled or expired.
+                    local_order.state = OrderState.CANCELLED
+                    logger.info(
+                        "Order %s no longer open with no fills — marked CANCELLED",
+                        local_order.local_id,
+                    )
+                if self.on_order_closed:
+                    try:
+                        self.on_order_closed(local_order)
+                    except Exception as exc:
+                        logger.error("on_order_closed hook failed: %s", exc)
+            mismatches += 1
+            if self._storage:
+                try:
+                    await self._storage.save_order(local_order)
+                except Exception as exc:
+                    logger.error(
+                        "Failed to persist reconciled order %s: %s",
+                        local_order.local_id,
+                        exc,
                     )
 
         return mismatches

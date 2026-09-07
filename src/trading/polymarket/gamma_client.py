@@ -10,6 +10,7 @@ Docs: https://docs.polymarket.com/api-reference/introduction
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -53,7 +54,7 @@ class GammaClient:
 
     Usage:
         client = GammaClient()
-        events = await client.get_events(tag="weather")
+        events = await client.get_events(tag_slug="weather")
         markets = await client.get_markets(condition_ids=[...])
         price = await client.get_best_price(condition_id, token_id)
     """
@@ -71,6 +72,7 @@ class GammaClient:
         self,
         *,
         tag: str | None = "weather",
+        tag_slug: str | None = None,
         active: bool | None = True,
         closed: bool | None = False,
         limit: int = 100,
@@ -78,8 +80,14 @@ class GammaClient:
     ) -> list[GammaEvent]:
         """Discover events, optionally filtered by tag and status.
 
+        NOTE: the ``/events`` endpoint filters by ``tag_slug``
+        (e.g. ``"weather"``) — the bare ``tag`` query param is silently
+        ignored server-side and returns unfiltered events. ``tag`` is
+        therefore mapped to ``tag_slug`` for backward compatibility.
+
         Args:
-            tag: Filter by tag (e.g. ``"weather"``). ``None`` for all.
+            tag: Legacy alias for ``tag_slug``. ``None`` for all.
+            tag_slug: Filter by tag slug (e.g. ``"weather"``).
             active: Only active (trading) events.
             closed: Include closed events.
             limit: Max events per page.
@@ -88,12 +96,14 @@ class GammaClient:
         Returns:
             List of ``GammaEvent`` objects with nested ``GammaMarket``\\s.
         """
+        if tag_slug is None:
+            tag_slug = tag
         params: dict[str, Any] = {
             "limit": limit,
             "offset": offset,
         }
-        if tag is not None:
-            params["tag"] = tag
+        if tag_slug is not None:
+            params["tag_slug"] = tag_slug
         if active is not None:
             params["active"] = str(active).lower()
         if closed is not None:
@@ -124,6 +134,36 @@ class GammaClient:
             return None
         resp.raise_for_status()
         return _parse_event(resp.json())
+
+    async def search_events(
+        self, query: str, *, limit: int = 25, page: int = 1
+    ) -> list[GammaEvent]:
+        """Full-text event search via ``/public-search``.
+
+        This is the reliable way to find city temperature markets
+        (e.g. ``"highest temperature NYC"``) — the ``/events`` listing
+        is unfiltered bulletins without it and paging it rarely lands
+        on the daily city markets.
+
+        Args:
+            query: Free-text query (e.g. ``"highest temperature NYC"``).
+            limit: Max events to return.
+            page: Result page (5 events per page server-side).
+
+        Returns:
+            List of ``GammaEvent`` objects with nested markets.
+        """
+        await self._limiter.wait("gamma-api")
+        resp = await self._shared.get(
+            f"{self._base_url}/public-search",
+            params={"q": query, "page": page},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        raw_events = data.get("events", []) if isinstance(data, dict) else []
+        if not isinstance(raw_events, list):
+            return []
+        return [_parse_event(raw) for raw in raw_events[:limit]]
 
     # ------------------------------------------------------------------
     # Market queries
@@ -295,7 +335,20 @@ def _parse_event(raw: dict[str, Any]) -> GammaEvent:
 def _parse_market(raw: dict[str, Any]) -> GammaMarket:
     token_ids = raw.get("clobTokenIds", "") or raw.get("clob_token_ids", "")
     if isinstance(token_ids, str):
-        token_ids = [t.strip() for t in token_ids.split(",") if t.strip()]
+        stripped = token_ids.strip()
+        # Search endpoints return a JSON-array string '["id1","id2"]'.
+        if stripped.startswith("["):
+            try:
+                parsed = json.loads(stripped)
+                token_ids = [str(t) for t in parsed if str(t).strip()]
+            except (ValueError, TypeError):
+                token_ids = [
+                    t.strip().strip('"[]')
+                    for t in stripped.split(",")
+                    if t.strip().strip('"[]')
+                ]
+        else:
+            token_ids = [t.strip() for t in stripped.split(",") if t.strip()]
 
     return GammaMarket(
         condition_id=str(raw.get("conditionId", raw.get("condition_id", ""))),

@@ -5,9 +5,12 @@ When the gap exceeds the configurable threshold, a BUY signal is
 generated. Optionally generates SELL signals when the market overprices
 an outcome the model says is unlikely (two-sided mode).
 
-This is the strategy that maps directly to the proven AI Bot approach
-($63K from $27): buy when the forecast says 60 % and the market prices
-it at 10 %, hold to settlement, repeat.
+This is the strategy that mirrors the AI Bot approach (buy when the
+forecast says 60 % and the market prices it at 10 %, hold to
+settlement, repeat). Historical P&L anecdotes are not validated
+backtests — any performance claim for this strategy must come from
+the backtester on real market prices (see
+scripts/backtest_real_polymarket.py), not from synthetic records.
 """
 
 from __future__ import annotations

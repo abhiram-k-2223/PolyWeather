@@ -178,7 +178,6 @@ class CLOBClient:
     # Order endpoints (authenticated)
     # ------------------------------------------------------------------
 
-    @retry_async(_RETRY)
     async def place_order(self, order: dict) -> dict:
         """Place an order on the CLOB.
 
@@ -195,6 +194,11 @@ class CLOBClient:
                 "signature_type": 2,  # EIP-712
                 "neg_risk": True,
             }
+
+        NOTE: deliberately NOT retried on transport errors. Order placement
+        is not idempotent — a timeout after the exchange accepted the order
+        would re-POST it and double-fill. Callers must treat exceptions as
+        unknown outcome and reconcile via get_orders/get_fills instead.
         """
         await self._limiter.wait("clob-order")
         body = json.dumps(order)

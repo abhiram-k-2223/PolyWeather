@@ -25,6 +25,9 @@ class DataAPIClient:
 
     def __init__(self, wallet: WalletManager) -> None:
         self._base_url = wallet.data_api_url.rstrip("/")
+        # Token price history lives on the CLOB API, not the Data API:
+        # GET https://clob.polymarket.com/prices-history?market=<token_id>.
+        self._clob_url = "https://clob.polymarket.com"
         self._shared = get_shared_client()
         self._limiter = RateLimiter(default_rate=10, default_capacity=20)
 
@@ -74,23 +77,57 @@ class DataAPIClient:
     ) -> dict:
         """Get historical price data for a token.
 
+        Served by the CLOB API (``/prices-history?market=<token_id>``) —
+        the Data API host has no such endpoint (it 404s). Returns
+        ``{"history": [{"t": <unix seconds>, "p": <price>}, ...]}``.
+
         Args:
             token_id: CLOB token ID for the outcome.
-            interval: '1m', '5m', '15m', '1h', '1d'.
-            limit: Number of data points.
+            interval: '1m', '5m', '15m', '1h', '6h', '1d', '1w'.
+            limit: Unused by the CLOB endpoint (history length is
+                server-determined); kept for backward compatibility.
         """
+        _ = limit
         params = {
-            "token_id": token_id,
+            "market": token_id,
             "interval": interval,
-            "limit": limit,
         }
-        await self._limiter.wait("data-api")
+        await self._limiter.wait("clob-prices-history")
         resp = await self._shared.get(
-            f"{self._base_url}/price-history",
+            f"{self._clob_url}/prices-history",
             params=params,
         )
         resp.raise_for_status()
         return resp.json()
+
+    async def get_market_trades(
+        self,
+        condition_id: str,
+        *,
+        limit: int = 500,
+    ) -> list:
+        """Get historical trades for a market (Data API, public).
+
+        This is the fallback decision-price source for closed markets:
+        the CLOB ``/prices-history`` endpoint purges series after
+        markets close (returns ``{"history": []}``). Trades carry
+        ``price`` / ``timestamp`` (unix seconds) / ``asset`` (token ID).
+
+        Args:
+            condition_id: Polymarket condition ID (0x...), passed as the
+                ``market`` query param — token IDs match nothing.
+            limit: Max trades (server-capped; newest-first ordering is
+                not guaranteed — callers filter by timestamp).
+        """
+        params = {"market": condition_id, "limit": limit}
+        await self._limiter.wait("data-api")
+        resp = await self._shared.get(
+            f"{self._base_url}/trades",
+            params=params,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data if isinstance(data, list) else []
 
     async def get_market_snapshots(
         self,
