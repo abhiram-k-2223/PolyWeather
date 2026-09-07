@@ -56,6 +56,7 @@ class SupabaseEntitlementService:
         self.anon_key = str(os.getenv("SUPABASE_ANON_KEY") or "").strip()
         self.timeout_sec = max(3, _env_int("SUPABASE_HTTP_TIMEOUT_SEC", 8))
         self.cache_ttl_sec = max(5, _env_int("SUPABASE_AUTH_CACHE_TTL_SEC", 30))
+        self.cache_max_entries = max(16, _env_int("SUPABASE_AUTH_CACHE_MAX_ENTRIES", 1024))
         self._identity_cache: Dict[str, Dict[str, object]] = {}
         self._identity_cache_lock = threading.Lock()
 
@@ -72,6 +73,29 @@ class SupabaseEntitlementService:
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/json",
         }
+
+    def _cache_identity(self, access_token: str, identity: Optional[SupabaseIdentity], ts: float) -> None:
+        with self._identity_cache_lock:
+            self._identity_cache[access_token] = {"identity": identity, "ts": ts}
+            if len(self._identity_cache) <= self.cache_max_entries:
+                return
+            # Evict expired entries first, then the oldest, to keep the
+            # cache bounded even under token-spam (each miss would
+            # otherwise pin raw bearer material in memory forever).
+            now_ts = time.time()
+            expired = [
+                key
+                for key, value in self._identity_cache.items()
+                if now_ts - float(value.get("ts") or 0) >= self.cache_ttl_sec
+            ]
+            for key in expired:
+                del self._identity_cache[key]
+            while len(self._identity_cache) > self.cache_max_entries:
+                oldest_key = min(
+                    self._identity_cache,
+                    key=lambda key: float(self._identity_cache[key].get("ts") or 0),
+                )
+                del self._identity_cache[oldest_key]
 
     def get_identity(self, access_token: str) -> Optional[SupabaseIdentity]:
         if not access_token:
@@ -95,20 +119,12 @@ class SupabaseEntitlementService:
             )
             if response.status_code != 200:
                 if response.status_code in {401, 403}:
-                    with self._identity_cache_lock:
-                        self._identity_cache[access_token] = {
-                            "identity": None,
-                            "ts": now_ts,
-                        }
+                    self._cache_identity(access_token, None, now_ts)
                 return None
             data = response.json() if response.content else {}
             user_id = str(data.get("id") or "").strip()
             if not user_id:
-                with self._identity_cache_lock:
-                    self._identity_cache[access_token] = {
-                        "identity": None,
-                        "ts": now_ts,
-                    }
+                self._cache_identity(access_token, None, now_ts)
                 return None
 
             identity = SupabaseIdentity(
@@ -116,11 +132,7 @@ class SupabaseEntitlementService:
                 email=str(data.get("email") or "").strip(),
                 created_at=str(data.get("created_at") or "").strip() or None,
             )
-            with self._identity_cache_lock:
-                self._identity_cache[access_token] = {
-                    "identity": identity,
-                    "ts": now_ts,
-                }
+            self._cache_identity(access_token, identity, now_ts)
             return identity
         except Exception as exc:
             logger.warning(f"supabase auth user check failed: {exc}")

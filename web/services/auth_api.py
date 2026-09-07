@@ -11,6 +11,7 @@ import time
 from typing import Any, Callable, Dict, Optional, TypeVar
 
 from fastapi import HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from loguru import logger
 
 import web.routes as legacy_routes
@@ -29,6 +30,16 @@ class _AuthMeTimer:
         started = time.perf_counter()
         try:
             return action()
+        finally:
+            self.timings_ms[stage] = round(
+                (time.perf_counter() - started) * 1000.0,
+                1,
+            )
+
+    async def measure_async(self, stage: str, action) -> T:
+        started = time.perf_counter()
+        try:
+            return await action()
         finally:
             self.timings_ms[stage] = round(
                 (time.perf_counter() - started) * 1000.0,
@@ -60,14 +71,17 @@ class _AuthMeTimer:
         )
 
 
-def get_auth_me_payload(request: Request) -> Dict[str, Any]:
+async def get_auth_me_payload(request: Request) -> Dict[str, Any]:
     timer = _AuthMeTimer(request)
     authenticated_for_log: Optional[bool] = None
     outcome = "ok"
     status_code = 200
 
     try:
-        timer.measure("bind_identity", lambda: legacy_routes._assert_entitlement(request))
+        await timer.measure_async(
+            "bind_identity",
+            lambda: run_in_threadpool(legacy_routes._assert_entitlement, request),
+        )
         user_id = str(getattr(request.state, "auth_user_id", "") or "").strip()
         email = str(getattr(request.state, "auth_email", "") or "").strip() or None
         authenticated_for_log = bool(user_id)

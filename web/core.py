@@ -111,6 +111,18 @@ CACHE_TTL_KOREAN_AMOS = 60
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def _metric_path_label(request: Request) -> str:
+    """Bounded-cardinality path label for metrics.
+
+    Using raw ``request.url.path`` lets random 404 paths mint unbounded
+    metric series; the matched route template is finite by construction,
+    and unmatched requests collapse into a single bucket.
+    """
+    route = request.scope.get("route")
+    template = getattr(route, "path", None)
+    return str(template) if template else "/unmatched"
+
+
 @app.middleware("http")
 async def _metrics_middleware(request: Request, call_next):
     started = time.perf_counter()
@@ -121,14 +133,14 @@ async def _metrics_middleware(request: Request, call_next):
         counter_inc(
             "polyweather_http_requests_total",
             method=request.method,
-            path=request.url.path,
+            path=_metric_path_label(request),
             status="500",
         )
         histogram_observe(
             "polyweather_http_request_duration_ms",
             duration_ms,
             method=request.method,
-            path=request.url.path,
+            path=_metric_path_label(request),
             status="500",
         )
         raise
@@ -138,14 +150,14 @@ async def _metrics_middleware(request: Request, call_next):
     counter_inc(
         "polyweather_http_requests_total",
         method=request.method,
-        path=request.url.path,
+        path=_metric_path_label(request),
         status=status_code,
     )
     histogram_observe(
         "polyweather_http_request_duration_ms",
         duration_ms,
         method=request.method,
-        path=request.url.path,
+        path=_metric_path_label(request),
         status=status_code,
     )
     return response

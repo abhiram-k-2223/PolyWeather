@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -646,6 +648,42 @@ def get_ops_observation_collector_status(
     _require_ops(request)
     safe_limit = max(1, min(int(limit or 200), 500))
     return ObservationCollectorStatusRepository().load_snapshot(limit=safe_limit)
+
+
+_HEALTH_CHECK_CACHE: dict[str, Any] = {"payload": None, "ts": 0.0}
+_HEALTH_CHECK_CACHE_LOCK = threading.Lock()
+
+
+def _health_check_cache_ttl_sec() -> float:
+    try:
+        return max(5.0, float(os.getenv("POLYWEATHER_OPS_HEALTH_CHECK_TTL_SEC", "30")))
+    except (TypeError, ValueError):
+        return 30.0
+
+
+def get_ops_health_check_cached(request: Request) -> dict[str, Any]:
+    """Return the ops health-check snapshot, re-fanning out only after TTL.
+
+    The check performs ~15 sequential blocking HTTP probes; without the
+    snapshot cache each request would stall its worker for up to ~2 minutes.
+    Callers must run this via a thread pool (it is fully blocking).
+    """
+    now = time.time()
+    with _HEALTH_CHECK_CACHE_LOCK:
+        cached_payload = _HEALTH_CHECK_CACHE.get("payload")
+        cached_ts = float(_HEALTH_CHECK_CACHE.get("ts") or 0.0)
+        if cached_payload is not None and now - cached_ts < _health_check_cache_ttl_sec():
+            return {
+                **cached_payload,
+                "cached": True,
+                "cache_age_sec": round(now - cached_ts, 1),
+            }
+
+    payload = get_ops_health_check(request)
+    with _HEALTH_CHECK_CACHE_LOCK:
+        _HEALTH_CHECK_CACHE["payload"] = payload
+        _HEALTH_CHECK_CACHE["ts"] = time.time()
+    return {**payload, "cached": False, "cache_age_sec": 0.0}
 
 
 def get_ops_health_check(request: Request) -> dict[str, Any]:

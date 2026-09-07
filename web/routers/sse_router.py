@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hmac
+import os
 import time
 import threading
 from typing import Any, Optional, Set
@@ -14,6 +16,9 @@ from web.realtime_event_store_factory import create_realtime_event_store
 from web.realtime_patch_schema import PatchValidationError, normalize_observation_patch
 from web.sse_manager import sse_manager
 
+
+COLLECTOR_PATCH_TOKEN_ENV = "POLYWEATHER_COLLECTOR_PATCH_TOKEN"
+COLLECTOR_PATCH_TOKEN_HEADER = "x-polyweather-collector-token"
 
 router = APIRouter(tags=["events"])
 event_store = create_realtime_event_store()
@@ -31,6 +36,24 @@ def _parse_cities_param(cities: str) -> Set[str]:
         for item in str(cities or "").split(",")
         if item.strip()
     }
+
+
+def _collector_patch_token() -> str:
+    return str(os.getenv(COLLECTOR_PATCH_TOKEN_ENV, "") or "").strip()
+
+
+def _require_collector_patch_auth(request: Request) -> None:
+    expected = _collector_patch_token()
+    provided = str(request.headers.get(COLLECTOR_PATCH_TOKEN_HEADER, "") or "").strip()
+    if (
+        not expected
+        or not provided
+        or not hmac.compare_digest(expected, provided)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="collector patch authentication failed",
+        )
 
 
 def _recommended_replay_limit(city_count: int) -> int:
@@ -157,7 +180,9 @@ async def sse_events(
 
 
 @router.post("/api/internal/collector-patch")
-async def ingest_patch(patch: dict[str, Any]):
+async def ingest_patch(request: Request, patch: dict[str, Any]):
+    _require_collector_patch_auth(request)
+
     try:
         normalized = normalize_observation_patch(patch)
     except PatchValidationError as exc:

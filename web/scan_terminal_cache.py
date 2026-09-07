@@ -15,6 +15,47 @@ _SCAN_TERMINAL_REDIS_CLIENT_LOCK = threading.Lock()
 _SCAN_TERMINAL_REDIS_CLIENT: Any = None
 _SCAN_TERMINAL_REDIS_UNAVAILABLE = False
 
+# The cache key embeds arbitrary user-supplied filter floats, so without a
+# bound every unique filter combination pins a full payload in memory.
+_SCAN_TERMINAL_CACHE_MAX_ENTRIES_DEFAULT = 64
+_SCAN_TERMINAL_CACHE_MAX_AGE_SEC_DEFAULT = 21600
+
+
+def _scan_terminal_cache_max_entries() -> int:
+    try:
+        return max(8, int(os.getenv("POLYWEATHER_SCAN_TERMINAL_CACHE_MAX_ENTRIES", str(_SCAN_TERMINAL_CACHE_MAX_ENTRIES_DEFAULT))))
+    except Exception:
+        return _SCAN_TERMINAL_CACHE_MAX_ENTRIES_DEFAULT
+
+
+def _scan_terminal_cache_max_age_sec() -> float:
+    try:
+        return max(600.0, float(os.getenv("POLYWEATHER_SCAN_TERMINAL_CACHE_MAX_AGE_SEC", str(_SCAN_TERMINAL_CACHE_MAX_AGE_SEC_DEFAULT))))
+    except Exception:
+        return float(_SCAN_TERMINAL_CACHE_MAX_AGE_SEC_DEFAULT)
+
+
+def _bound_scan_terminal_cache_locked() -> None:
+    """Caller must hold _SCAN_TERMINAL_CACHE_LOCK. Evict stale entries, then oldest."""
+    max_entries = _scan_terminal_cache_max_entries()
+    if len(_SCAN_TERMINAL_CACHE) <= max_entries:
+        return
+    now = time.time()
+    max_age = _scan_terminal_cache_max_age_sec()
+    stale = [
+        key
+        for key, entry in _SCAN_TERMINAL_CACHE.items()
+        if now - float(entry.get("t") or 0.0) >= max_age
+    ]
+    for key in stale:
+        del _SCAN_TERMINAL_CACHE[key]
+    while len(_SCAN_TERMINAL_CACHE) > max_entries:
+        oldest_key = min(
+            _SCAN_TERMINAL_CACHE,
+            key=lambda key: float(_SCAN_TERMINAL_CACHE[key].get("t") or 0.0),
+        )
+        del _SCAN_TERMINAL_CACHE[oldest_key]
+
 
 def scan_terminal_cache_key(filters: Dict[str, Any]) -> str:
     return json.dumps(filters, ensure_ascii=True, sort_keys=True)
@@ -144,6 +185,7 @@ def get_scan_terminal_cache_entry(filters: Dict[str, Any]) -> Optional[Dict[str,
 
     with _SCAN_TERMINAL_CACHE_LOCK:
         _SCAN_TERMINAL_CACHE[cache_key] = dict(redis_entry)
+        _bound_scan_terminal_cache_locked()
     return dict(redis_entry)
 
 
@@ -164,6 +206,7 @@ def set_cached_scan_terminal_payload(
     }
     with _SCAN_TERMINAL_CACHE_LOCK:
         _SCAN_TERMINAL_CACHE[cache_key] = dict(entry)
+        _bound_scan_terminal_cache_locked()
     _write_redis_cache_entry(cache_key, entry)
 
 
@@ -178,6 +221,7 @@ def set_scan_terminal_failure_state(
     existing["last_failed_at"] = datetime.utcnow().isoformat() + "Z"
     with _SCAN_TERMINAL_CACHE_LOCK:
         _SCAN_TERMINAL_CACHE[cache_key] = dict(existing)
+        _bound_scan_terminal_cache_locked()
     _write_redis_cache_entry(cache_key, existing)
 
 

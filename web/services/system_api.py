@@ -20,7 +20,7 @@ def get_health_payload() -> Dict[str, Any]:
 
 
 async def get_system_status_payload(request: Request) -> Dict[str, Any]:
-    legacy_routes._require_ops_admin(request)
+    await run_in_threadpool(legacy_routes._require_ops_admin, request)
     payload = await run_in_threadpool(build_system_status_payload)
     payload["realtime"] = await run_in_threadpool(_realtime_status_payload)
     return payload
@@ -52,8 +52,8 @@ def _realtime_status_payload() -> Dict[str, Any]:
         }
 
 
-def get_system_cache_status(request: Request, cities: Optional[str] = None) -> Dict[str, Any]:
-    legacy_routes._require_ops_admin(request)
+async def get_system_cache_status(request: Request, cities: Optional[str] = None) -> Dict[str, Any]:
+    await run_in_threadpool(legacy_routes._require_ops_admin, request)
     selected = legacy_routes._normalize_city_list(cities)
     if not selected:
         selected = legacy_routes._normalize_city_list(None)
@@ -82,12 +82,12 @@ def get_system_cache_status(request: Request, cities: Optional[str] = None) -> D
     return {"cities": items}
 
 
-def run_system_priority_warm(
+async def run_system_priority_warm(
     request: Request,
     background_tasks: BackgroundTasks,
     timezone: Optional[str] = None,
 ) -> Dict[str, Any]:
-    legacy_routes._assert_entitlement(request)
+    await run_in_threadpool(legacy_routes._assert_entitlement, request)
     batches = legacy_routes._select_priority_city_batches(timezone)
     primary = list(batches.get("primary") or [])
     secondary = list(batches.get("secondary") or [])
@@ -119,8 +119,8 @@ def run_system_priority_warm(
     }
 
 
-def get_prometheus_metrics_response(request: Request) -> PlainTextResponse:
-    legacy_routes._require_ops_admin(request)
+async def get_prometheus_metrics_response(request: Request) -> PlainTextResponse:
+    await run_in_threadpool(legacy_routes._require_ops_admin, request)
     return PlainTextResponse(
         export_prometheus_metrics(),
         media_type="text/plain; version=0.0.4; charset=utf-8",

@@ -302,6 +302,58 @@ def test_ingest_patch_uses_external_fanout_without_direct_broadcast(monkeypatch)
     monkeypatch.setattr(sse_router, "event_store", store)
     monkeypatch.setattr(sse_router, "sse_manager", manager)
     monkeypatch.setattr(sse_router, "_live_subscription_started", False)
+    monkeypatch.setenv(sse_router.COLLECTOR_PATCH_TOKEN_ENV, "test-secret")
+
+    client = TestClient(app)
+    patch_body = {
+        "city": "taipei",
+        "changes": {
+            "temp": 34.2,
+            "source": "cwa",
+            "obs_time": "2026-05-27T10:00:00+08:00",
+        },
+    }
+
+    unauthenticated = client.post("/api/internal/collector-patch", json=patch_body)
+    assert unauthenticated.status_code == 403
+
+    wrong_token = client.post(
+        "/api/internal/collector-patch",
+        json=patch_body,
+        headers={sse_router.COLLECTOR_PATCH_TOKEN_HEADER: "wrong"},
+    )
+    assert wrong_token.status_code == 403
+
+    response = client.post(
+        "/api/internal/collector-patch",
+        json=patch_body,
+        headers={sse_router.COLLECTOR_PATCH_TOKEN_HEADER: "test-secret"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["revision"] == 12
+    assert store.started == 1
+    assert manager.broadcasted == []
+
+
+def test_ingest_patch_fails_closed_without_configured_token(monkeypatch):
+    class FakeExternalStore:
+        uses_external_live_fanout = True
+
+        def __init__(self):
+            self.appended = []
+
+        def start_live_subscription(self, callback):
+            pass
+
+        def append_event(self, event):
+            self.appended.append(event)
+            return {**event, "revision": 1}
+
+    store = FakeExternalStore()
+    monkeypatch.setattr(sse_router, "event_store", store)
+    monkeypatch.setattr(sse_router, "_live_subscription_started", False)
+    monkeypatch.delenv(sse_router.COLLECTOR_PATCH_TOKEN_ENV, raising=False)
 
     response = TestClient(app).post(
         "/api/internal/collector-patch",
@@ -313,9 +365,8 @@ def test_ingest_patch_uses_external_fanout_without_direct_broadcast(monkeypatch)
                 "obs_time": "2026-05-27T10:00:00+08:00",
             },
         },
+        headers={sse_router.COLLECTOR_PATCH_TOKEN_HEADER: "anything"},
     )
 
-    assert response.status_code == 200
-    assert response.json()["revision"] == 12
-    assert store.started == 1
-    assert manager.broadcasted == []
+    assert response.status_code == 403
+    assert store.appended == []

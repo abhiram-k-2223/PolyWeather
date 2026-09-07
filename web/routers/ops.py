@@ -6,12 +6,13 @@ logs, health, analytics, training, source health, truth history).
 """
 
 from fastapi import APIRouter, Request, Response
+from fastapi.concurrency import run_in_threadpool
 
 from web.services.ops_api import (
     get_ops_analytics_funnel,
     get_ops_config,
     get_ops_sensitive_config,
-    get_ops_health_check,
+    get_ops_health_check_cached,
     get_ops_logs,
     get_ops_observation_collector_status,
     get_ops_source_health,
@@ -140,7 +141,10 @@ async def ops_logs(
 
 @router.get("/api/ops/health-check")
 async def ops_health_check(request: Request):
-    return get_ops_health_check(request)
+    # The health check fans out to ~15 sources with blocking HTTP; run it in
+    # the threadpool so the event loop (and every live SSE stream) keeps
+    # serving while probes run. Results are snapshot-cached for a short TTL.
+    return await run_in_threadpool(get_ops_health_check_cached, request)
 
 
 @router.get("/api/ops/source-health")

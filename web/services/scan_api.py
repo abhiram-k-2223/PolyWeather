@@ -48,7 +48,10 @@ async def get_scan_terminal_payload(
     outcome = "ok"
     status_code = 200
     try:
-        timer.measure("assert_entitlement", lambda: legacy_routes._assert_entitlement(request))
+        await timer.measure_async(
+            "assert_entitlement",
+            lambda: run_in_threadpool(legacy_routes._assert_entitlement, request),
+        )
         filters: Dict[str, Any] = {
             "scan_mode": scan_mode,
             "min_price": min_price,

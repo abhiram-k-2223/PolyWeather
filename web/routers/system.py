@@ -29,7 +29,7 @@ async def system_status(request: Request):
 
 @router.get("/api/system/cache-status")
 async def system_cache_status(request: Request, cities: Optional[str] = None):
-    return get_system_cache_status(request, cities=cities)
+    return await get_system_cache_status(request, cities=cities)
 
 
 @router.post("/api/system/priority-warm")
@@ -38,12 +38,12 @@ async def system_priority_warm(
     background_tasks: BackgroundTasks,
     timezone: Optional[str] = None,
 ):
-    return run_system_priority_warm(request, background_tasks, timezone=timezone)
+    return await run_system_priority_warm(request, background_tasks, timezone=timezone)
 
 
 @router.get("/metrics", response_class=PlainTextResponse)
 async def metrics(request: Request):
-    return get_prometheus_metrics_response(request)
+    return await get_prometheus_metrics_response(request)
 
 
 @router.get("/api/dashboard/init")

@@ -689,10 +689,10 @@ async def get_city_detail_payload(
     city = legacy_routes._normalize_city_or_404(name)
     normalized_depth = str(depth or "panel").strip().lower()
     if normalized_depth == "full":
-        legacy_routes._assert_entitlement(request)
+        await run_in_threadpool(legacy_routes._assert_entitlement, request)
         detail_mode = "full"
     elif normalized_depth == "market":
-        legacy_routes._assert_entitlement(request)
+        await run_in_threadpool(legacy_routes._assert_entitlement, request)
         detail_mode = "market"
     elif normalized_depth == "nearby":
         detail_mode = "nearby"
@@ -797,7 +797,10 @@ async def get_city_detail_aggregate_payload(
     outcome = "ok"
     status_code = 200
     try:
-        timer.measure("assert_entitlement", lambda: legacy_routes._assert_entitlement(request))
+        await timer.measure_async(
+            "assert_entitlement",
+            lambda: run_in_threadpool(legacy_routes._assert_entitlement, request),
+        )
         city = timer.measure("normalize_city", lambda: legacy_routes._normalize_city_or_404(name))
         data = await timer.measure_async(
             "full_data",
@@ -1139,7 +1142,10 @@ async def get_city_detail_batch_payload(
     outcome = "ok"
     status_code = 200
     try:
-        timer.measure("assert_entitlement", lambda: legacy_routes._assert_entitlement(request))
+        await timer.measure_async(
+            "assert_entitlement",
+            lambda: run_in_threadpool(legacy_routes._assert_entitlement, request),
+        )
         city_names = timer.measure(
             "parse_cities",
             lambda: _parse_batch_city_names(
