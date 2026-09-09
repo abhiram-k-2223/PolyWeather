@@ -106,6 +106,77 @@ def test_portfolio_value_uses_paper_base_then_cached_cash():
     assert eng._estimate_portfolio_value() == 5000.0
 
 
+def test_risk_slippage_and_depth_checks_opt_in():
+    from src.trading.engine.risk_engine import RiskConfig, RiskEngine
+
+    # Legacy default: unconfigured slippage model never rejects.
+    eng = RiskEngine(RiskConfig())
+    ok = eng.assess(
+        signal_confidence=0.9, position_size=400.0, open_orders=[],
+        total_portfolio_value=10000.0,
+    )
+    assert ok.allowed is True
+    # Configured linear model rejects an order past slippage tolerance
+    # (400 USDC stays under the $500 position cap — only slippage blocks).
+    hot = RiskEngine(RiskConfig(slippage_bps_per_100usd=20.0, max_slippage_bps=50))
+    assert hot.estimate_slippage_bps(400.0) == 80.0
+    blocked = hot.assess(
+        signal_confidence=0.9, position_size=400.0, open_orders=[],
+        total_portfolio_value=10000.0,
+    )
+    assert blocked.allowed is False and "slippage" in blocked.reason
+    # Thin-book guard rejects only when live depth is supplied.
+    thin = RiskEngine(RiskConfig(min_orderbook_depth_usd=100.0))
+    assert thin.assess(
+        signal_confidence=0.9, position_size=10.0, open_orders=[],
+        total_portfolio_value=10000.0, orderbook_depth_usd=15.0,
+    ).allowed is False
+    assert thin.assess(
+        signal_confidence=0.9, position_size=10.0, open_orders=[],
+        total_portfolio_value=10000.0, orderbook_depth_usd=500.0,
+    ).allowed is True
+
+
+def test_backtester_slippage_worsens_fills_and_defaults_off():
+    from scripts.backtester.base import BacktestConfig, BacktestRecord
+    from scripts.backtester.engine import (
+        apply_slippage_to_price, compute_slippage_fraction, run_backtest,
+    )
+    from scripts.backtester.strategies.forecast_gap import ForecastGapStrategy
+
+    assert compute_slippage_fraction(200.0, 0) == 0.0
+    # 10bps per $100 on a $200 order = 20bps = 0.002 price fraction.
+    assert compute_slippage_fraction(200.0, 10) == 0.002
+    assert apply_slippage_to_price(0.5, 200.0, 0) == 0.5
+    assert apply_slippage_to_price(0.5, 200.0, 10) > 0.5
+    # Square-root impact charges less than linear for small vs depth.
+    lin = compute_slippage_fraction(50.0, 10)
+    sqrt = compute_slippage_fraction(50.0, 10, orderbook_depth_usd=10_000.0)
+    assert 0 < sqrt < lin
+
+    recs = [
+        BacktestRecord(city="new york", target_date=f"2026-01-0{d}",
+                       model_probability=0.9, market_price=0.05,
+                       actual_outcome=1.0)
+        for d in range(1, 4)
+    ]
+    plain = run_backtest(
+        list(recs), ForecastGapStrategy(BacktestConfig()), BacktestConfig(),
+    )
+    slipped = run_backtest(
+        list(recs),
+        ForecastGapStrategy(BacktestConfig(slippage_bps=100)),
+        BacktestConfig(slippage_bps=100),
+    )
+    assert plain.trades and slipped.trades
+    # Default config keeps legacy point-price fills.
+    assert plain.trades[0].entry_price == 0.05
+    assert plain.trades[0].metadata.get("slippage_bps_charged") == 0.0
+    # Enabled slippage pays up and earns fewer tokens per USDC.
+    assert slipped.trades[0].entry_price > 0.05
+    assert slipped.trades[0].size_tokens < plain.trades[0].size_tokens
+
+
 def test_settle_matched_position_records_real_pnl_and_cooldown():
     eng = _engine()
     order = TrackedOrder(

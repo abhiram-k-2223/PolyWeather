@@ -31,6 +31,12 @@ class RiskConfig:
         cooldown_seconds: Seconds to wait after a losing trade before trading again.
         max_drawdown_pct: Maximum allowed drawdown as fraction of portfolio.
         max_slippage_bps: Maximum allowed slippage in basis points.
+        min_orderbook_depth_usd: Minimum orderbook depth (USD) at the best
+            price required to trade. 0 disables the depth check (default —
+            live depth requires a Pendulum Flow / CLOB book lookup, Sec 3.3).
+        slippage_bps_per_100usd: Expected slippage in bps per $100 of order
+            size (linear market-impact model, Sec 3.2). 0 disables the
+            expected-slippage check.
     """
 
     max_position_size_usdc: float = 500.0
@@ -41,6 +47,8 @@ class RiskConfig:
     cooldown_seconds: float = 300.0  # 5 min after loss
     max_drawdown_pct: float = 0.15  # 15%
     max_slippage_bps: int = 50  # 0.5%
+    min_orderbook_depth_usd: float = 0.0
+    slippage_bps_per_100usd: float = 0.0
 
 
 @dataclass
@@ -72,6 +80,26 @@ class RiskEngine:
     # Pre-trade checks
     # ------------------------------------------------------------------
 
+    def estimate_slippage_bps(
+        self,
+        position_size: float,
+        *,
+        orderbook_depth_usd: float = 0.0,
+    ) -> float:
+        """Expected slippage in bps for a proposed size (pure estimate).
+
+        Section 3.2/3.3 market-impact model: linear in size by default
+        (``slippage_bps_per_100usd`` per $100); when live
+        ``orderbook_depth_usd`` is supplied a square-root impact model
+        is used instead. Returns 0.0 when the model is unconfigured.
+        """
+        if self._config.slippage_bps_per_100usd <= 0 or position_size <= 0:
+            return 0.0
+        rate = self._config.slippage_bps_per_100usd
+        if orderbook_depth_usd and orderbook_depth_usd > 0:
+            return rate * (position_size / orderbook_depth_usd) ** 0.5
+        return rate * (position_size / 100.0)
+
     def assess(
         self,
         signal_confidence: float,
@@ -79,6 +107,9 @@ class RiskEngine:
         open_orders: list[TrackedOrder],
         total_portfolio_value: float,
         condition_exposure: float = 0.0,
+        *,
+        expected_slippage_bps: float | None = None,
+        orderbook_depth_usd: float | None = None,
     ) -> RiskAssessment:
         """Run all risk checks for a proposed trade.
 
@@ -88,6 +119,11 @@ class RiskEngine:
             open_orders: Currently open orders.
             total_portfolio_value: Total account value in USDC.
             condition_exposure: Current exposure to this specific condition.
+            expected_slippage_bps: Caller-supplied expected slippage; when
+                None the engine estimates it from ``position_size`` via
+                :meth:`estimate_slippage_bps`.
+            orderbook_depth_usd: Live orderbook depth at best price (USD);
+                when None no depth is assumed known.
 
         Returns:
             RiskAssessment with allowed=True if all checks pass.
@@ -179,6 +215,46 @@ class RiskEngine:
                     current_exposure=self._current_exposure(open_orders),
                     current_positions=len(open_orders),
                 )
+
+        # -- orderbook depth check (Sec 3.3: thin-book guard) --
+        # Only enforced when the caller supplies live depth AND a minimum
+        # is configured — otherwise there is nothing to check against.
+        if (
+            orderbook_depth_usd is not None
+            and self._config.min_orderbook_depth_usd > 0
+            and orderbook_depth_usd < self._config.min_orderbook_depth_usd
+        ):
+            return RiskAssessment(
+                allowed=False,
+                reason=(
+                    f"Orderbook depth ${orderbook_depth_usd:.0f} < "
+                    f"min ${self._config.min_orderbook_depth_usd:.0f}"
+                ),
+                current_exposure=self._current_exposure(open_orders),
+                current_positions=len(open_orders),
+            )
+
+        # -- slippage check (Sec 3.2/3.3: market impact vs tolerance) --
+        # Only enforced when a slippage model is configured; legacy
+        # callers passing no depth/slippage see 0.0 expected and pass.
+        slip_bps = (
+            expected_slippage_bps
+            if expected_slippage_bps is not None
+            else self.estimate_slippage_bps(
+                position_size,
+                orderbook_depth_usd=orderbook_depth_usd or 0.0,
+            )
+        )
+        if slip_bps > self._config.max_slippage_bps:
+            return RiskAssessment(
+                allowed=False,
+                reason=(
+                    f"Expected slippage {slip_bps:.1f}bps > "
+                    f"max {self._config.max_slippage_bps}bps"
+                ),
+                current_exposure=self._current_exposure(open_orders),
+                current_positions=len(open_orders),
+            )
 
         return RiskAssessment(
             allowed=True,

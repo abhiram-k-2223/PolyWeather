@@ -148,6 +148,16 @@ def main() -> int:
     parser.add_argument("--kelly-fraction", type=float, default=0.25)
     parser.add_argument("--max-position-size", type=float, default=500.0)
     parser.add_argument("--two-sided", action="store_true")
+    parser.add_argument(
+        "--slippage-bps", type=float, default=0.0,
+        help="Slippage in bps per $100 of order size (0 = point-price fills). "
+             "Guide Sec 3.2; e.g. --slippage-bps 10 charges ~10bps per $100.",
+    )
+    parser.add_argument(
+        "--orderbook-depth-usd", type=float, default=0.0,
+        help="Reference orderbook depth at best price (USD). When set, "
+             "uses a square-root market-impact model instead of linear.",
+    )
     parser.add_argument("--output-json", type=str, help="Path for JSON report")
     parser.add_argument("--output-csv", type=str, help="Path for CSV trade log")
     parser.add_argument("--demo", action="store_true", help="Run with synthetic demo data")
@@ -177,6 +187,8 @@ def main() -> int:
         kelly_fraction=args.kelly_fraction,
         max_position_size_usdc=args.max_position_size,
         two_sided=args.two_sided,
+        slippage_bps=args.slippage_bps,
+        orderbook_depth_usd=args.orderbook_depth_usd,
     )
 
     strategy_cls = STRATEGIES[args.strategy]

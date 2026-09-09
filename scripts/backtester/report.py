@@ -109,6 +109,8 @@ def result_to_dict(result: BacktestResult) -> dict[str, Any]:
             "maker_fee": result.config.maker_fee,
             "two_sided": result.config.two_sided,
             "min_confidence": result.config.min_confidence,
+            "slippage_bps": result.config.slippage_bps,
+            "orderbook_depth_usd": result.config.orderbook_depth_usd,
         },
         "summary": {
             "final_bankroll": result.final_bankroll,

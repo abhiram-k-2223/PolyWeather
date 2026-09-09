@@ -95,6 +95,12 @@ class BacktestConfig:
         maker_fee: CLOB maker fee as a fraction (default 0.001).
         two_sided: Generate SELL signals too.
         min_confidence: Minimum model_probability to consider a signal.
+        slippage_bps: Slippage in basis points per $100 of order size
+            (linear model). 0 disables (default — backtests are
+            point-price fills unless slippage is explicitly enabled).
+        orderbook_depth_usd: Reference orderbook depth at best price.
+            When set (> 0), uses a square-root market-impact model
+            instead of the linear fallback (Pendulum Flow, Sec 3.2).
     """
 
     initial_bankroll: float = 10_000.0
@@ -107,6 +113,8 @@ class BacktestConfig:
     maker_fee: float = 0.001
     two_sided: bool = False
     min_confidence: float = 0.6
+    slippage_bps: int = 0
+    orderbook_depth_usd: float = 0.0
 
 
 @dataclass

@@ -53,6 +53,81 @@ def _compute_kelly_size(
     return min(raw_size, config.max_position_size_usdc)
 
 
+def compute_slippage_fraction(
+    size_usdc: float,
+    slippage_bps: float,
+    orderbook_depth_usd: float = 0.0,
+) -> float:
+    """Fractional price worsening for a market order (pure function).
+
+    Section 3.2 (Pendulum Flow): linear fallback charges
+    ``slippage_bps`` per $100 of size; when ``orderbook_depth_usd``
+    is known a square-root market-impact model is used instead::
+
+        linear:  slip = (bps / 1e4) * (size / 100)
+        sqrt:    slip = (bps / 1e4) * sqrt(size / depth)
+
+    Returns 0.0 when slippage is disabled (bps <= 0) or size <= 0.
+    """
+    if slippage_bps <= 0 or size_usdc <= 0:
+        return 0.0
+    rate = slippage_bps / 10_000.0
+    if orderbook_depth_usd and orderbook_depth_usd > 0:
+        import math
+
+        return rate * math.sqrt(size_usdc / orderbook_depth_usd)
+    return rate * (size_usdc / 100.0)
+
+
+def apply_slippage_to_price(
+    market_price: float,
+    size_usdc: float,
+    slippage_bps: float,
+    orderbook_depth_usd: float = 0.0,
+) -> float:
+    """Worsen ``market_price`` for a BUY fill (pure function).
+
+    The buyer pays up: ``effective = price * (1 + slip)``, clamped
+    below 1.0 so fills stay in valid probability space. SELL/short
+    fills use the same adverse direction (fewer tokens per USDC).
+    """
+    slip = compute_slippage_fraction(size_usdc, slippage_bps, orderbook_depth_usd)
+    if slip <= 0:
+        return market_price
+    return min(market_price * (1.0 + slip), 0.99)
+
+
+def apply_book_slippage(
+    market_price: float,
+    size_usdc: float,
+    asks: object,
+) -> tuple[float, str]:
+    """VWAP fill against a real Pendulum ``book`` ask ladder (pure).
+
+    Returns ``(effective_price, fill_source)`` where source is
+    ``book_vwap`` when the ladder fills (fully or partially) and
+    ``book_empty`` when the ladder carries no depth (caller falls back
+    to the bps proxy). Exhausted books are conservative: the VWAP over
+    resting depth is used (partial fill aborts are the caller's policy
+    — see ``fill_buy_asks``). Clamped below 1.0.
+    """
+    try:
+        from src.trading.polymarket.pendulum_book import fill_buy_asks
+    except ImportError:
+        return market_price, "book_empty"
+    fill = fill_buy_asks(asks, size_usdc)
+    vwap = fill.get("vwap")
+    if vwap is None:
+        return market_price, "book_empty"
+    try:
+        vwap_f = float(vwap)
+    except (TypeError, ValueError):
+        return market_price, "book_empty"
+    if not 0 < vwap_f < 1:
+        return market_price, "book_empty"
+    return min(vwap_f, 0.99), "book_vwap"
+
+
 def run_backtest(
     records: list[BacktestRecord],
     strategy: Strategy,
@@ -126,19 +201,49 @@ def run_backtest(
                 if size_usdc <= 0:
                     continue
 
-                size_tokens = size_usdc / rec.market_price
+                # Section 3.2: realistic fills. When the record carries a
+                # real Pendulum ask ladder (metadata["asks"]) the backtest
+                # pays the book VWAP; otherwise the bps proxy applies.
+                # No asks + 0 bps (defaults) = legacy point-price fills,
+                # so existing results are unchanged.
+                book_asks = rec.metadata.get("asks") if rec.metadata else None
+                fill_source = "bps_proxy"
+                if book_asks:
+                    entry_price, fill_source = apply_book_slippage(
+                        rec.market_price, size_usdc, book_asks,
+                    )
+                    if fill_source == "book_empty":
+                        entry_price = apply_slippage_to_price(
+                            rec.market_price,
+                            size_usdc,
+                            cfg.slippage_bps,
+                            cfg.orderbook_depth_usd,
+                        )
+                else:
+                    entry_price = apply_slippage_to_price(
+                        rec.market_price,
+                        size_usdc,
+                        cfg.slippage_bps,
+                        cfg.orderbook_depth_usd,
+                    )
+                slip_bps_charged = (
+                    (entry_price / rec.market_price - 1.0) * 10_000.0
+                    if rec.market_price > 0
+                    else 0.0
+                )
+                size_tokens = size_usdc / entry_price
                 entry_fee = size_usdc * cfg.maker_fee
                 total_fees += entry_fee
                 bankroll -= size_usdc + entry_fee
                 open_positions[city] = {
                     "size_usdc": size_usdc,
                     "size_tokens": size_tokens,
-                    "entry_price": rec.market_price,
+                    "entry_price": entry_price,
                 }
 
                 trade = TradeRecord(
                     direction=sig_dir,
-                    entry_price=rec.market_price,
+                    entry_price=entry_price,
                     size_usdc=size_usdc,
                     size_tokens=size_tokens,
                     entry_bankroll=local_bankroll,
@@ -153,6 +258,8 @@ def run_backtest(
                     market_price_at_entry=rec.market_price,
                     gap=gap,
                     timestamp=rec.target_date,
+                    metadata={"slippage_bps_charged": round(slip_bps_charged, 2),
+                              "fill_source": fill_source},
                 )
                 trades.append(trade)
 
