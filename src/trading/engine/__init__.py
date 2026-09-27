@@ -10,6 +10,7 @@ from .order_manager import OrderManager
 from .signal_ingestion import SignalIngestor, TradeSignal
 from .risk_engine import RiskEngine, RiskConfig
 from .position_tracker import PositionTracker
+from .paper_trade_store import PaperTradeStore, PaperTradeRecord
 
 __all__ = [
     "TradingEngine",
@@ -20,4 +21,6 @@ __all__ = [
     "RiskEngine",
     "RiskConfig",
     "PositionTracker",
+    "PaperTradeStore",
+    "PaperTradeRecord",
 ]

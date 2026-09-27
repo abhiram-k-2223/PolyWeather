@@ -23,6 +23,7 @@ from ..polymarket.clob_client import CLOBClient
 from ..polymarket.data_api_client import DataAPIClient
 from ..polymarket.wallet import WalletManager
 from .order_manager import OrderManager, OrderState, TrackedOrder
+from .paper_trade_store import PaperTradeRecord, PaperTradeStore
 from .position_tracker import PositionTracker
 from .risk_engine import RiskConfig, RiskEngine
 from .signal_ingestion import (
@@ -54,6 +55,7 @@ class EngineConfig:
     reconcile_interval_seconds: float = 300.0
     max_orders_per_run: int = 3
     trade_on_signals: bool = True
+    paper_mode: bool = False
     risk: RiskConfig = field(default_factory=RiskConfig)
 
     # ICAO -> (condition_id, token_id)
@@ -82,30 +84,45 @@ class TradingEngine:
 
     def __init__(
         self,
-        wallet: WalletManager,
+        wallet: Optional[WalletManager],
         config: Optional[EngineConfig] = None,
         signal_callback: Optional[Callable[[], list[TradeSignal]]] = None,
+        paper_store: Optional[PaperTradeStore] = None,
     ) -> None:
         """
         Args:
             wallet: WalletManager for signing and CLOB auth.
+                May be None in paper_mode (no live writes, no key required).
             config: Engine configuration.
             signal_callback: Optional synchronous callback that returns
                 new TradeSignals. Used as an alternative to direct
                 ingestion from the analysis pipeline.
+            paper_store: Optional PaperTradeStore. Created internally
+                when paper_mode is on and none is supplied.
         """
         self._config = config or EngineConfig()
+        self._paper_mode = bool(self._config.paper_mode)
 
-        # Build Polymarket clients
-        self._clob = CLOBClient(wallet)
-        self._data_api = DataAPIClient(wallet)
+        # Build Polymarket clients (paper without key => no clients).
+        if wallet is None:
+            if not self._paper_mode:
+                raise ValueError("wallet is required for live trading")
+            self._clob = None  # type: ignore[assignment]
+            self._data_api = None  # type: ignore[assignment]
+        else:
+            self._clob = CLOBClient(wallet)
+            self._data_api = DataAPIClient(wallet)
 
         # Build engine components
-        self._order_manager = OrderManager(self._clob)
+        self._order_manager = OrderManager(self._clob, paper_mode=self._paper_mode)
         self._position_tracker = PositionTracker()
         self._risk_engine = RiskEngine(self._config.risk)
         self._signal_ingestor = SignalIngestor()
         self._signal_callback = signal_callback
+        if self._paper_mode:
+            self._paper_store: Optional[PaperTradeStore] = paper_store or PaperTradeStore()
+        else:
+            self._paper_store = paper_store
 
         # Feed verified order closures into risk accounting so the daily
         # trade limit and post-loss cooldown actually engage.
@@ -289,12 +306,138 @@ class TradingEngine:
             },
         )
 
-        if order.state == OrderState.OPEN:
+        if order.state in (OrderState.OPEN, OrderState.MATCHED):
             self._stats["orders_placed"] += 1
+            paper = bool(
+                getattr(self._config, "paper_mode", False)
+                or getattr(self, "_paper_mode", False)
+            )
+            if paper:
+                self._log_paper_trade(signal, order, token_id, side, size)
         else:
             self._stats["orders_failed"] += 1
 
         return order
+
+    def _log_paper_trade(
+        self,
+        signal: TradeSignal,
+        order: TrackedOrder,
+        token_id: str,
+        side: str,
+        size: float,
+    ) -> Optional[PaperTradeRecord]:
+        """Mirror a paper fill into the PaperTradeStore (no CLOB writes)."""
+        store = getattr(self, "_paper_store", None)
+        if store is None:
+            store = PaperTradeStore()
+            self._paper_store = store
+        meta = signal.metadata or {}
+        try:
+            model_probability = float(meta.get("model_probability", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            model_probability = 0.0
+        market_price = meta.get("market_price")
+        try:
+            market_price_f = float(market_price) if market_price is not None else None
+        except (TypeError, ValueError):
+            market_price_f = None
+        try:
+            gap = float(meta.get("gap", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            gap = 0.0
+        if gap == 0.0 and market_price_f is not None:
+            gap = model_probability - market_price_f
+        record = store.log_trade(
+            condition_id=signal.condition_id,
+            token_id=token_id,
+            side=side,
+            price=order.price,
+            size=size,
+            direction=signal.direction.value,
+            confidence=signal.confidence,
+            source=signal.source.value,
+            model_probability=model_probability,
+            market_price=market_price_f,
+            gap=gap,
+            metadata={
+                "order_local_id": order.local_id,
+                "signal_timestamp": signal.timestamp.isoformat(),
+            },
+        )
+        order.metadata = {
+            **(order.metadata or {}),
+            "paper_local_id": record.local_id,
+        }
+        return record
+
+    def settle_paper_position(self, token_id: str, won: bool) -> Optional[PaperTradeRecord]:
+        """Settle an open paper position by token id.
+
+        Closes the PaperTradeStore record (win => payout 1.0, loss => 0.0),
+        marks matching OPEN paper orders MATCHED to free exposure, and feeds
+        realized PnL into RiskEngine for cooldown/drawdown. Returns the
+        settled record, or None when no open paper position exists.
+        """
+        store = getattr(self, "_paper_store", None)
+        if store is None:
+            return None
+        record = store.record_settlement(token_id, won=won)
+        if record is None:
+            return None
+        for o in self._order_manager.get_orders_by_condition(record.condition_id):
+            if o.token_id == token_id and o.state == OrderState.OPEN:
+                o.state = OrderState.MATCHED
+                o.matched_at = datetime.now(timezone.utc)
+                o.filled_size = o.size
+                o.avg_fill_price = o.price
+        self._risk_engine.record_trade(record.simulated_pnl)
+        return record
+
+    def settle_due_paper_positions(
+        self, resolutions: dict[str, bool]
+    ) -> list[PaperTradeRecord]:
+        """Settle every open paper position that has a known outcome.
+
+        Args:
+            resolutions: token_id -> won mapping from a resolution
+                source (e.g. closed-market outcomes). Positions without
+                an entry are left open — outcomes are never fabricated.
+
+        Returns the settled records in open-position order.
+        """
+        store = getattr(self, "_paper_store", None)
+        if store is None or not resolutions:
+            return []
+        settled: list[PaperTradeRecord] = []
+        for pos in list(store.get_open_positions()):
+            if pos.token_id not in resolutions:
+                continue
+            record = self.settle_paper_position(
+                pos.token_id, won=bool(resolutions[pos.token_id])
+            )
+            if record is not None:
+                settled.append(record)
+        return settled
+
+    async def cancel_paper_order(self, local_id: str) -> bool:
+        """Cancel a paper order in both OrderManager and PaperTradeStore."""
+        ok = await self._order_manager.cancel_order(local_id)
+        store = getattr(self, "_paper_store", None)
+        if store is not None:
+            for t in list(store.get_open_positions()):
+                md = t.metadata or {}
+                if md.get("order_local_id") == local_id or t.token_id == local_id:
+                    store.cancel_trade(t.local_id)
+                    break
+            else:
+                # Fall back: OrderManager local_id may equal paper mapping
+                # via order metadata.
+                order = self._order_manager.get_order(local_id)
+                paper_id = (order.metadata or {}).get("paper_local_id") if order else None
+                if paper_id:
+                    store.cancel_trade(paper_id)
+        return ok
 
     async def process_observation(
         self, snapshot: WeatherObservationSnapshot
@@ -334,9 +477,11 @@ class TradingEngine:
 
     def get_status(self) -> dict[str, Any]:
         """Return engine status for health/status endpoints."""
+        store = getattr(self, "_paper_store", None)
         return {
             "running": self._running,
             "enabled": self._config.enabled,
+            "paper_mode": bool(getattr(self._config, "paper_mode", False)),
             "stats": {**self._stats},
             "orders": {
                 "open": len(self._order_manager.get_open_orders()),
@@ -346,6 +491,17 @@ class TradingEngine:
                 "count": self._position_tracker.position_count(),
                 "exposure": self._position_tracker.get_total_exposure(),
                 "unrealized_pnl": self._position_tracker.get_total_unrealized_pnl(),
+            },
+            "paper": store.get_stats() if store is not None else {
+                "total_trades": 0,
+                "open_positions": 0,
+                "settled_trades": 0,
+                "wins": 0,
+                "losses": 0,
+                "win_rate": 0.0,
+                "total_pnl_usdc": 0.0,
+                "avg_pnl_per_trade": 0.0,
+                "total_volume_usdc": 0.0,
             },
         }
 
@@ -399,6 +555,28 @@ class TradingEngine:
                 return tok_id
         return self._signal_ingestor.get_token_id(condition_id)
 
+    def update_market_map(self, market_map: dict[str, tuple[str, str]]) -> int:
+        """Refresh ICAO -> (condition_id, token_id) routing without restart.
+
+        Used by the daily Gamma refresh
+        (``web.services.trading_api.refresh_market_map_from_gamma``).
+        Entries with an empty condition or token are skipped. Returns the
+        number of ICAOs (re-)registered.
+        """
+        count = 0
+        for icao, pair in (market_map or {}).items():
+            try:
+                cond_id, tok_id = pair
+            except (TypeError, ValueError) as exc:
+                logger.warning("Skipping malformed market entry %s: %s", icao, exc)
+                continue
+            if not cond_id or not tok_id:
+                continue
+            self._config.city_to_market_map[icao] = (cond_id, tok_id)
+            self._signal_ingestor.register_market(icao, cond_id, tok_id)
+            count += 1
+        return count
+
     def _compute_position_size(self, signal: TradeSignal) -> float:
         """Compute Quarter Kelly position size, capped by risk config.
 
@@ -429,6 +607,8 @@ class TradingEngine:
         Returns the resulting portfolio value. Failures degrade
         gracefully to the last cached/paper estimate.
         """
+        if getattr(self, "_clob", None) is None:
+            return self._estimate_portfolio_value()
         try:
             balance = await self._clob.get_balance()
             for key in ("balance", "cash", "usdc", "available"):

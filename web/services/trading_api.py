@@ -39,7 +39,29 @@ def _engine_enabled() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_paper_mode() -> bool:
+    """Paper execution branch flag — defaults True (safe default).
+
+    Live CLOB writes require explicit opt-out: POLY_PAPER_MODE=0/false/no/off.
+    """
+    raw = os.environ.get("POLY_PAPER_MODE", "true")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _load_city_market_map() -> dict[str, tuple[str, str]]:
+    """Load the ICAO -> (condition_id, token_id) seed map.
+
+    Format (``POLY_MARKET_MAP`` env JSON)::
+
+        {"KLGA": ["0xcondition…", "123 token…"], "KLAX": ["0x…", "456…"]}
+
+    Daily temperature markets expire, so this seed goes stale. Prefer the
+    daily Gamma refresh — ``refresh_market_map_from_gamma()`` resolves
+    each ``POLY_TRADING_FEED_CITIES`` ICAO to today's condition via
+    ``GammaClient.resolve_city_markets()`` and pushes the result into the
+    engine with ``TradingEngine.update_market_map()`` (refresh overwrites
+    resolved entries, leaves the rest alone).
+    """
     """Load ICAO -> (condition_id, token_id) mappings from env.
 
     Format: POLY_MARKET_MAP='{"KLAX":("cond_abc","token_xyz"),...}'
@@ -76,6 +98,112 @@ def _build_wallet() -> Optional[WalletManager]:
     )
 
 
+def _feed_cities(explicit: dict[str, str] | None = None) -> dict[str, str]:
+    """ICAO -> city-name allowlist for the signal feed.
+
+    Defaults to ``{"KLGA": "new york", "KLAX": "los angeles",
+    "KORD": "chicago"}``; override with ``POLY_TRADING_FEED_CITIES``
+    (comma-separated ICAOs, e.g. ``"KLGA,KLAX"``). Unknown ICAOs fall
+    back to the lowercased ICAO as the Gamma search string (usually
+    resolving to nothing and skipped).
+    """
+    from src.trading.polymarket.market_resolver import DEFAULT_FEED_CITIES
+
+    if explicit:
+        return dict(explicit)
+    raw = os.environ.get("POLY_TRADING_FEED_CITIES", "")
+    if not raw.strip():
+        return dict(DEFAULT_FEED_CITIES)
+    cities: dict[str, str] = {}
+    for token in raw.split(","):
+        icao = token.strip().upper()
+        if not icao:
+            continue
+        cities[icao] = DEFAULT_FEED_CITIES.get(icao, icao.lower())
+    return cities or dict(DEFAULT_FEED_CITIES)
+
+
+def refresh_market_map_from_gamma(
+    client: Any | None = None,
+    engine: TradingEngine | None = None,
+    feed_cities: dict[str, str] | None = None,
+) -> dict[str, tuple[str, str]]:
+    """Resolve each feed city to today's market and push it to the engine.
+
+    Fetch candidates per city via
+    ``GammaClient.resolve_city_markets(city)``, pick one market each with
+    ``build_market_map()``, and register the result via
+    ``TradingEngine.update_market_map()``. Unresolvable cities are left
+    out (prior entries stay). Returns the resolved map.
+    """
+    from src.trading.polymarket.market_resolver import build_market_map
+
+    cities = _feed_cities(feed_cities)
+    if client is None:
+        from src.trading.polymarket.gamma_client import GammaClient
+
+        client = GammaClient()
+    candidates: dict[str, tuple[str, list]] = {}
+    for icao, city in cities.items():
+        try:
+            markets = client.resolve_city_markets(city)
+        except Exception as exc:
+            logger.warning("Gamma resolve failed for %s (%s): %s", icao, city, exc)
+            continue
+        candidates[icao] = (city, list(markets or []))
+    market_map = build_market_map(candidates)
+    target = engine if engine is not None else get_engine()
+    if target is not None and market_map:
+        target.update_market_map(market_map)
+    return market_map
+
+
+async def check_and_settle_closed_markets(
+    engine: TradingEngine | None = None,
+    client: Any | None = None,
+) -> list:
+    """Settle open paper positions whose markets have closed (Step 3 loop).
+
+    For each open paper position, fetch the market via
+    ``GammaClient.get_market(condition_id)`` and parse the outcome with
+    ``resolve_token_outcome()``. Resolved positions settle through
+    ``TradingEngine.settle_paper_position()`` (which feeds realized PnL
+    into the risk engine); unresolved markets and per-market fetch
+    failures are skipped so one bad market never blocks the loop.
+    Returns the settled records.
+    """
+    from src.trading.polymarket.market_resolution import resolve_token_outcome
+
+    target = engine if engine is not None else get_engine()
+    if target is None:
+        return []
+    store = getattr(target, "_paper_store", None)
+    if store is None:
+        return []
+    if client is None:
+        from src.trading.polymarket.gamma_client import GammaClient
+
+        client = GammaClient()
+    settled: list = []
+    for pos in list(store.get_open_positions()):
+        try:
+            market = await client.get_market(pos.condition_id)
+        except Exception as exc:
+            logger.warning(
+                "Settlement check failed for %s: %s", pos.condition_id[:10], exc
+            )
+            continue
+        if market is None:
+            continue
+        won = resolve_token_outcome(market, pos.token_id)
+        if won is None:
+            continue
+        record = target.settle_paper_position(pos.token_id, won=won)
+        if record is not None:
+            settled.append(record)
+    return settled
+
+
 def _build_engine_config() -> EngineConfig:
     """Build EngineConfig from environment variables with sensible defaults."""
     risk = RiskConfig(
@@ -95,6 +223,7 @@ def _build_engine_config() -> EngineConfig:
     )
     return EngineConfig(
         enabled=_engine_enabled(),
+        paper_mode=_is_paper_mode(),
         poll_interval_seconds=float(
             os.environ.get("POLY_POLL_INTERVAL_SEC", "60")
         ),
@@ -137,15 +266,25 @@ def init_trading_engine() -> Optional[TradingEngine]:
     if _ENGINE is not None:
         return _ENGINE
 
+    config = _build_engine_config()
     wallet = _build_wallet()
-    if wallet is None:
+    if wallet is None and not config.paper_mode:
         logger.info("Trading engine not initialized — no wallet configured")
         return None
+    if wallet is None:
+        logger.info("Paper mode: initializing engine without wallet (no live writes)")
 
     _WALLET = wallet
-    config = _build_engine_config()
     _ENGINE = TradingEngine(wallet=wallet, config=config)
-    logger.info("Trading engine initialized (enabled=%s)", config.enabled)
+    if config.paper_mode and not config.enabled:
+        logger.info("Trading engine initialized in paper mode (enabled=%s)", config.enabled)
+    elif config.paper_mode:
+        logger.info("Trading engine initialized PAPER (enabled=%s) — no live orders", config.enabled)
+    else:
+        logger.warning(
+            "Trading engine initialized LIVE (paper_mode=0, enabled=%s) — real orders!",
+            config.enabled,
+        )
     return _ENGINE
 
 

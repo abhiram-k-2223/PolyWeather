@@ -74,10 +74,12 @@ class OrderManager:
     """
 
     def __init__(
-        self, clob_client: CLOBClient, storage: Optional[Any] = None
+        self, clob_client: Optional[CLOBClient], storage: Optional[Any] = None,
+        *, paper_mode: bool = False,
     ) -> None:
         self._clob = clob_client
         self._storage = storage  # optional TradeStore for persistence
+        self._paper_mode = paper_mode
         self._orders: dict[str, TrackedOrder] = {}  # local_id -> order
         self._next_id: int = 0
         # Optional hook invoked when an order reaches a terminal state with
@@ -119,6 +121,20 @@ class OrderManager:
         )
         self._orders[local_id] = order
 
+        # Paper mode: never touch the CLOB. Simulate an immediately
+        # resting OPEN order with a local paper id — no network writes.
+        if self._paper_mode:
+            order.order_id = f"paper_{local_id}"
+            order.state = OrderState.OPEN
+            order.metadata = {**(order.metadata or {}), "paper": True}
+            logger.info(
+                "Paper order %s: %s %s %.4f @ %.4f (no CLOB write)",
+                local_id, side, token_id[:10], size, price,
+            )
+            if self._storage:
+                await self._storage.save_order(order)
+            return order
+
         try:
             clob_order = self._build_clob_order(order, neg_risk=neg_risk)
             result = await self._clob.place_order(clob_order)
@@ -149,6 +165,12 @@ class OrderManager:
         if not order:
             logger.warning("Order %s not found", local_id)
             return False
+        if self._paper_mode:
+            order.state = OrderState.CANCELLED
+            logger.info("Paper order %s cancelled (no CLOB write)", local_id)
+            if self._storage:
+                await self._storage.save_order(order)
+            return True
         if not order.order_id:
             order.state = OrderState.CANCELLED
             return True
@@ -188,6 +210,9 @@ class OrderManager:
 
         Returns the number of mismatches found and corrected.
         """
+        # Paper mode has no remote book — nothing to reconcile, no reads.
+        if self._paper_mode:
+            return 0
         try:
             remote = await self._clob.get_orders(status="OPEN")
         except Exception as exc:
