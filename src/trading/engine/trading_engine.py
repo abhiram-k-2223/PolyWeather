@@ -64,7 +64,7 @@ class EngineConfig:
     # Paper-trading cash baseline used by _estimate_portfolio_value() when
     # no live CLOB balance has been cached yet. Explicitly a paper figure —
     # live trading must call refresh_portfolio_from_clob() first.
-    paper_base_usdc: float = 10000.0
+    paper_base_usdc: float = 2000.0
 
 
 class TradingEngine:
