@@ -8,6 +8,7 @@ the existing weather pipeline.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import os
 import threading
@@ -209,6 +210,134 @@ async def check_and_settle_closed_markets(
 
 
 # ------------------------------------------------------------------
+# Edge-gated signal feed (Step 4: model probability vs live market price)
+# ------------------------------------------------------------------
+
+
+def _signal_feed_enabled() -> bool:
+    """Whether the signal feed runs — default True.
+
+    Disable explicitly with POLY_SIGNAL_FEED_ENABLED=0/false/no/off.
+    """
+    raw = os.environ.get("POLY_SIGNAL_FEED_ENABLED", "true")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _edge_threshold() -> float:
+    """Minimum model-vs-market gap to trade (default 0.08 = 8 %).
+
+    Mirrors ``BacktestConfig.edge_threshold`` so live paper fills
+    reproduce the backtest edge buckets.
+    """
+    try:
+        return max(0.0, float(os.environ.get("POLY_EDGE_THRESHOLD", "0.08")))
+    except (TypeError, ValueError):
+        return 0.08
+
+
+def _live_signals_enabled() -> bool:
+    """Opt-in for real-order signal flow — default False.
+
+    The feed places paper orders by default; live CLOB orders require
+    explicit POLY_LIVE_SIGNALS=1/true/yes/on.
+    """
+    raw = os.environ.get("POLY_LIVE_SIGNALS", "false")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+async def run_signal_feed_once(
+    engine: TradingEngine | None = None,
+    client: Any | None = None,
+    probability_provider: Callable[..., Any] | None = None,
+) -> dict[str, Any]:
+    """One signal-feed tick: edge-gated model-vs-market signals -> orders.
+
+    For each feed city with a mapped market, fetch the live YES midpoint
+    price, ask ``probability_provider(icao, city, condition_id, token_id)``
+    for the model probability (0–1, None/NaN to skip), and emit a signal
+    via ``SignalIngestor.ingest_forecast_gap`` — BUY only when
+    ``model_p - market_price > edge_threshold``. Signals flow through
+    ``TradingEngine.process_signal`` (risk + Kelly sizing unchanged).
+
+    Gating: the engine must be enabled; live (non-paper) engines additionally
+    require POLY_LIVE_SIGNALS=1 — otherwise the tick is a no-op. With no
+    probability provider configured the feed idles (logs, zero signals):
+    the edge path is wired, but there is deliberately no placeholder
+    probability. Per-city failures are skipped so one bad city never
+    blocks the loop. Returns
+    ``{"signals": n, "orders": n, "skipped": [icao, ...]}``.
+    """
+    target = engine if engine is not None else get_engine()
+    if target is None or not target.config.enabled:
+        return {"signals": 0, "orders": 0, "skipped": []}
+    if not _signal_feed_enabled():
+        return {"signals": 0, "orders": 0, "skipped": []}
+    paper = bool(getattr(target.config, "paper_mode", False))
+    if not paper and not _live_signals_enabled():
+        logger.warning(
+            "Signal feed blocked: live engine without POLY_LIVE_SIGNALS=1"
+        )
+        return {"signals": 0, "orders": 0, "skipped": ["live-gated"]}
+    if probability_provider is None:
+        logger.info("Signal feed idle: no probability provider configured")
+        return {"signals": 0, "orders": 0, "skipped": []}
+    if client is None:
+        from src.trading.polymarket.gamma_client import GammaClient
+
+        client = GammaClient()
+    cities = _feed_cities()
+    market_map = target.config.city_to_market_map or {}
+    edge = _edge_threshold()
+    signals = 0
+    orders = 0
+    skipped: list[str] = []
+    for icao, city in cities.items():
+        entry = market_map.get(icao)
+        if not entry or not entry[0] or not entry[1]:
+            skipped.append(icao)
+            continue
+        condition_id, token_id = entry
+        try:
+            model_p = probability_provider(icao, city, condition_id, token_id)
+            if inspect.isawaitable(model_p):
+                model_p = await model_p
+            model_p = float(model_p)  # type: ignore[arg-type]
+        except (TypeError, ValueError) as exc:
+            logger.debug("Feed skip %s: no model probability (%s)", icao, exc)
+            skipped.append(icao)
+            continue
+        except Exception as exc:
+            logger.warning("Feed provider failed for %s: %s", icao, exc)
+            skipped.append(icao)
+            continue
+        try:
+            price = await client.get_midpoint_price(condition_id, token_id)
+            if price is None:
+                price = await client.get_best_price(
+                    condition_id, token_id, side="BUY"
+                )
+        except Exception as exc:
+            logger.warning("Feed price fetch failed for %s: %s", icao, exc)
+            skipped.append(icao)
+            continue
+        signal = target._signal_ingestor.ingest_forecast_gap(
+            icao, model_p, price, city=city, edge_threshold=edge
+        )
+        if signal is None:
+            skipped.append(icao)
+            continue
+        signals += 1
+        try:
+            order = await target.process_signal(signal)
+        except Exception as exc:
+            logger.warning("Feed process_signal failed for %s: %s", icao, exc)
+            continue
+        if order is not None and order.state.value in ("OPEN", "MATCHED"):
+            orders += 1
+    return {"signals": signals, "orders": orders, "skipped": skipped}
+
+
+# ------------------------------------------------------------------
 # In-process paper maintenance loop (map refresh + settlement)
 # ------------------------------------------------------------------
 
@@ -233,23 +362,41 @@ def _paper_loop_interval_sec() -> float:
 async def run_paper_maintenance_once(
     engine: TradingEngine | None = None,
     client: Any | None = None,
+    probability_provider: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
-    """One maintenance tick: refresh the market map, settle closed markets.
+    """One maintenance tick: refresh map, run signal feed, settle closed.
 
-    Returns {"market_map": ..., "settled_tokens": [...]}. Per-city and
-    per-market failures are skipped inside the helpers, so this never
-    raises for data reasons — only when there is no engine at all
-    (returns empty results in that case).
+    Returns {"market_map": ..., "feed": {...}, "settled_tokens": [...]}.
+    Per-city and per-market failures are skipped inside the helpers, so
+    this never raises for data reasons — only when there is no engine at
+    all (returns empty results in that case).
     """
     target = engine if engine is not None else get_engine()
     if target is None:
-        return {"market_map": {}, "settled_tokens": []}
+        return {"market_map": {}, "feed": {"signals": 0, "orders": 0, "skipped": []}, "settled_tokens": []}
     market_map = await refresh_market_map_from_gamma(engine=target, client=client)
+    feed = await run_signal_feed_once(
+        engine=target, client=client, probability_provider=probability_provider
+    )
     settled = await check_and_settle_closed_markets(engine=target, client=client)
     return {
         "market_map": market_map,
+        "feed": feed,
         "settled_tokens": [r.token_id for r in settled],
     }
+
+
+def production_tick() -> Any:
+    """Production maintenance tick: map refresh + feed + settlement.
+
+    Wires the Open-Meteo Gaussian probability provider into the signal
+    feed so the loop trades edge (not placeholders) in paper mode.
+    """
+    from src.trading.signals.openmeteo_probability import openmeteo_probability
+
+    return asyncio.run(
+        run_paper_maintenance_once(probability_provider=openmeteo_probability)
+    )
 
 
 def start_paper_loop(
@@ -269,7 +416,7 @@ def start_paper_loop(
         return True
     _PAPER_LOOP_STOP.clear()
     interval = interval_sec if interval_sec is not None else _paper_loop_interval_sec()
-    work = tick if tick is not None else lambda: asyncio.run(run_paper_maintenance_once())
+    work = tick if tick is not None else production_tick
 
     def _loop() -> None:
         while not _PAPER_LOOP_STOP.wait(interval):

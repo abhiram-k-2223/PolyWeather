@@ -325,6 +325,71 @@ class SignalIngestor:
             )
         return None
 
+    def ingest_forecast_gap(
+        self,
+        icao: str,
+        model_probability: float | None,
+        market_price: float | None,
+        *,
+        city: str = "",
+        edge_threshold: float = 0.08,
+        max_price_for_buy: float = 0.10,
+        min_price_for_sell: float = 0.90,
+        two_sided: bool = False,
+        metadata: dict | None = None,
+    ) -> Optional[TradeSignal]:
+        """Edge-gated signal: trade only when the model beats the market.
+
+        Mirrors ``ForecastGapStrategy`` (``scripts/backtester/strategies/
+        forecast_gap.py``) so live paper fills reproduce backtest edge
+        buckets: ``gap = model_probability - market_price``; BUY when
+        ``gap > edge_threshold`` and the entry is cheap
+        (``market_price <= max_price_for_buy``); SELL (bearish) only in
+        ``two_sided`` mode when ``-gap > edge_threshold`` and
+        ``market_price >= min_price_for_sell``. Otherwise None (HOLD).
+
+        Execution is priced **at the market** (``target_price =
+        market_price``) — never at a model-derived discount — and the
+        signal carries ``model_probability`` / ``market_price`` / ``gap``
+        metadata that Kelly sizing and the paper store already expect.
+        """
+        condition_id = self._city_to_market.get(icao, "")
+        if not condition_id:
+            return None
+        try:
+            p = float(model_probability)  # type: ignore[arg-type]
+            m = float(market_price)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+        if not 0.0 < p < 1.0 or not 0.0 < m < 1.0:
+            return None
+        gap = p - m
+        direction: SignalDirection | None = None
+        if gap > edge_threshold and m <= max_price_for_buy:
+            direction = SignalDirection.BUY
+        elif two_sided and -gap > edge_threshold and m >= min_price_for_sell:
+            direction = SignalDirection.SELL
+        if direction is None:
+            return None
+        signal = TradeSignal(
+            condition_id=condition_id,
+            token_id=self._condition_to_token.get(condition_id, ""),
+            direction=direction,
+            confidence=min(0.95, 0.5 + abs(gap) * 2.0),
+            target_price=m,
+            source=SignalSource.COMPOSITE,
+            metadata={
+                "model_probability": p,
+                "market_price": m,
+                "gap": gap,
+                "city": city or icao,
+                **(metadata or {}),
+            },
+        )
+        self._signals.append(signal)
+        del self._signals[:-self._max_signals]
+        return signal
+
     def _alert_to_signal(
         self, icao: str, condition_id: str, alert: dict, city: str
     ) -> Optional[TradeSignal]:
