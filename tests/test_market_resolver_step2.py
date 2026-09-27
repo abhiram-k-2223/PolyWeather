@@ -99,7 +99,7 @@ class _FakeGamma:
         self.by_city = by_city
         self.calls = []
 
-    def resolve_city_markets(self, city, tag="weather", active_only=True):
+    async def resolve_city_markets(self, city, tag="weather", active_only=True):
         self.calls.append(city)
         return self.by_city.get(city, [])
 
@@ -115,9 +115,9 @@ def test_refresh_market_map_from_gamma_wires_engine(monkeypatch):
         "new york": [_market("c-ny", ["t-ny"], 5.0)],
         "los angeles": [_market("c-la", ["t-la"], 7.0)],
     })
-    got = tapi.refresh_market_map_from_gamma(
+    got = asyncio.run(tapi.refresh_market_map_from_gamma(
         client=client, engine=eng, feed_cities=None
-    )
+    ))
     assert got == {"KLGA": ("c-ny", "t-ny"), "KLAX": ("c-la", "t-la")}
     assert eng._signal_ingestor.get_condition_id("KLGA") == "c-ny"
     orders = asyncio.run(eng.process_observation(_snapshot(icao="KLAX")))

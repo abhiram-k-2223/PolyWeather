@@ -7,9 +7,11 @@ the existing weather pipeline.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-from typing import Any, Optional
+import threading
+from typing import Any, Callable, Optional
 
 from src.trading.engine import TradingEngine, EngineConfig, RiskConfig
 from src.trading.engine.signal_ingestion import (
@@ -28,6 +30,8 @@ logger = logging.getLogger(__name__)
 _ENGINE: Optional[TradingEngine] = None
 _STORE: Optional[TradeStore] = None
 _WALLET: Optional[WalletManager] = None
+_PAPER_LOOP_THREAD: Optional[threading.Thread] = None
+_PAPER_LOOP_STOP = threading.Event()
 
 
 # ------------------------------------------------------------------
@@ -123,7 +127,7 @@ def _feed_cities(explicit: dict[str, str] | None = None) -> dict[str, str]:
     return cities or dict(DEFAULT_FEED_CITIES)
 
 
-def refresh_market_map_from_gamma(
+async def refresh_market_map_from_gamma(
     client: Any | None = None,
     engine: TradingEngine | None = None,
     feed_cities: dict[str, str] | None = None,
@@ -146,11 +150,11 @@ def refresh_market_map_from_gamma(
     candidates: dict[str, tuple[str, list]] = {}
     for icao, city in cities.items():
         try:
-            markets = client.resolve_city_markets(city)
+            markets = await client.resolve_city_markets(city)
+            candidates[icao] = (city, list(markets or []))
         except Exception as exc:
             logger.warning("Gamma resolve failed for %s (%s): %s", icao, city, exc)
             continue
-        candidates[icao] = (city, list(markets or []))
     market_map = build_market_map(candidates)
     target = engine if engine is not None else get_engine()
     if target is not None and market_map:
@@ -202,6 +206,90 @@ async def check_and_settle_closed_markets(
         if record is not None:
             settled.append(record)
     return settled
+
+
+# ------------------------------------------------------------------
+# In-process paper maintenance loop (map refresh + settlement)
+# ------------------------------------------------------------------
+
+
+def _paper_loop_enabled() -> bool:
+    """Whether the paper maintenance loop runs — default True (safe).
+
+    Disable explicitly with POLY_PAPER_LOOP_ENABLED=0/false/no/off.
+    """
+    raw = os.environ.get("POLY_PAPER_LOOP_ENABLED", "true")
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _paper_loop_interval_sec() -> float:
+    """Seconds between maintenance ticks (default 900 = 15 min)."""
+    try:
+        return max(60.0, float(os.environ.get("POLY_PAPER_LOOP_INTERVAL_SEC", "900")))
+    except (TypeError, ValueError):
+        return 900.0
+
+
+async def run_paper_maintenance_once(
+    engine: TradingEngine | None = None,
+    client: Any | None = None,
+) -> dict[str, Any]:
+    """One maintenance tick: refresh the market map, settle closed markets.
+
+    Returns {"market_map": ..., "settled_tokens": [...]}. Per-city and
+    per-market failures are skipped inside the helpers, so this never
+    raises for data reasons — only when there is no engine at all
+    (returns empty results in that case).
+    """
+    target = engine if engine is not None else get_engine()
+    if target is None:
+        return {"market_map": {}, "settled_tokens": []}
+    market_map = await refresh_market_map_from_gamma(engine=target, client=client)
+    settled = await check_and_settle_closed_markets(engine=target, client=client)
+    return {
+        "market_map": market_map,
+        "settled_tokens": [r.token_id for r in settled],
+    }
+
+
+def start_paper_loop(
+    tick: Callable[[], Any] | None = None,
+    interval_sec: float | None = None,
+) -> bool:
+    """Start the daemon paper-maintenance thread. Returns True if running.
+
+    No-op (False) when POLY_PAPER_LOOP_ENABLED is off or a live loop is
+    already running. ``tick`` is injectable for tests; production ticks
+    run run_paper_maintenance_once() to completion via asyncio.run.
+    """
+    global _PAPER_LOOP_THREAD
+    if not _paper_loop_enabled():
+        return False
+    if _PAPER_LOOP_THREAD is not None and _PAPER_LOOP_THREAD.is_alive():
+        return True
+    _PAPER_LOOP_STOP.clear()
+    interval = interval_sec if interval_sec is not None else _paper_loop_interval_sec()
+    work = tick if tick is not None else lambda: asyncio.run(run_paper_maintenance_once())
+
+    def _loop() -> None:
+        while not _PAPER_LOOP_STOP.wait(interval):
+            try:
+                work()
+            except Exception:
+                logger.exception("Paper maintenance tick failed")
+
+    thread = threading.Thread(target=_loop, name="paper-maintenance", daemon=True)
+    thread.start()
+    _PAPER_LOOP_THREAD = thread
+    logger.info("Paper maintenance loop started (interval=%.0fs)", interval)
+    return True
+
+
+def stop_paper_loop() -> None:
+    """Signal the maintenance thread to stop and forget it."""
+    global _PAPER_LOOP_THREAD
+    _PAPER_LOOP_STOP.set()
+    _PAPER_LOOP_THREAD = None
 
 
 def _build_engine_config() -> EngineConfig:
@@ -297,6 +385,8 @@ def start_trading_engine() -> None:
     if engine and engine.config.enabled:
         engine.start()
         logger.info("Trading engine background loop started")
+        if getattr(engine.config, "paper_mode", False):
+            start_paper_loop()
     else:
         logger.info(
             "Trading engine not started (enabled=%s, engine=%s)",
@@ -311,6 +401,7 @@ def stop_trading_engine() -> None:
     Called from the app shutdown lifecycle.
     """
     global _ENGINE
+    stop_paper_loop()
     if _ENGINE:
         _ENGINE.stop()
         _ENGINE = None
