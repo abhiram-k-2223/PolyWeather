@@ -140,8 +140,19 @@ async def refresh_market_map_from_gamma(
     ``build_market_map()``, and register the result via
     ``TradingEngine.update_market_map()``. Unresolvable cities are left
     out (prior entries stay). Returns the resolved map.
+
+    Additionally merges the global keyword-discovery pass
+    (``search_temperature_markets`` → ``discover`` → ``pick``): every
+    city Polymarket lists temperature markets for — including Asian
+    cities — enters the map under its city slug (e.g. ``"tokyo"``).
+    Clients without ``search_events`` simply skip this pass.
     """
     from src.trading.polymarket.market_resolver import build_market_map
+    from src.trading.signals.temperature_discovery import (
+        discover_temperature_markets,
+        pick_tradeable_markets,
+        search_temperature_markets,
+    )
 
     cities = _feed_cities(feed_cities)
     if client is None:
@@ -157,6 +168,16 @@ async def refresh_market_map_from_gamma(
             logger.warning("Gamma resolve failed for %s (%s): %s", icao, city, exc)
             continue
     market_map = build_market_map(candidates)
+    search = getattr(client, "search_events", None)
+    if callable(search):
+        try:
+            events = await search_temperature_markets(client)
+            picked = pick_tradeable_markets(discover_temperature_markets(events))
+            for slug, rec in picked.items():
+                if rec.condition_id and rec.token_ids:
+                    market_map[slug] = (rec.condition_id, rec.token_ids[0])
+        except Exception as exc:
+            logger.warning("Temperature discovery failed: %s", exc)
     target = engine if engine is not None else get_engine()
     if target is not None and market_map:
         target.update_market_map(market_map)
@@ -271,7 +292,10 @@ async def run_signal_feed_once(
     require POLY_LIVE_SIGNALS=1 — otherwise the tick is a no-op. With no
     probability provider configured the feed idles (logs, zero signals):
     the edge path is wired, but there is deliberately no placeholder
-    probability. Per-city failures are skipped so one bad city never
+    probability. The tick iterates the engine's market map (populated by
+    the discovery refresh each tick, so every discovered city worldwide
+    is covered); POLY_TRADING_FEED_CITIES, when set, restricts the tick
+    to the listed keys. Per-city failures are skipped so one bad city never
     blocks the loop. Returns
     ``{"signals": n, "orders": n, "skipped": [icao, ...]}``.
     """
@@ -293,30 +317,44 @@ async def run_signal_feed_once(
         from src.trading.polymarket.gamma_client import GammaClient
 
         client = GammaClient()
-    cities = _feed_cities()
+    from src.trading.signals.temperature_discovery import CITY_COORDS
+
+    legacy_names = _feed_cities()
+    allow_raw = os.environ.get("POLY_TRADING_FEED_CITIES", "").strip()
+    allow = (
+        {t.strip().upper() for t in allow_raw.split(",") if t.strip()}
+        if allow_raw
+        else None
+    )
     market_map = target.config.city_to_market_map or {}
     edge = _edge_threshold()
     signals = 0
     orders = 0
     skipped: list[str] = []
-    for icao, city in cities.items():
-        entry = market_map.get(icao)
-        if not entry or not entry[0] or not entry[1]:
-            skipped.append(icao)
+    for key, entry in market_map.items():
+        if allow is not None and key.upper() not in allow:
+            skipped.append(key)
             continue
+        if not entry or not entry[0] or not entry[1]:
+            skipped.append(key)
+            continue
+        city = legacy_names.get(key)
+        if city is None:
+            hit = CITY_COORDS.get(key.lower())
+            city = hit[0] if hit else key
         condition_id, token_id = entry
         try:
-            model_p = probability_provider(icao, city, condition_id, token_id)
+            model_p = probability_provider(key, city, condition_id, token_id)
             if inspect.isawaitable(model_p):
                 model_p = await model_p
             model_p = float(model_p)  # type: ignore[arg-type]
         except (TypeError, ValueError) as exc:
-            logger.debug("Feed skip %s: no model probability (%s)", icao, exc)
-            skipped.append(icao)
+            logger.debug("Feed skip %s: no model probability (%s)", key, exc)
+            skipped.append(key)
             continue
         except Exception as exc:
-            logger.warning("Feed provider failed for %s: %s", icao, exc)
-            skipped.append(icao)
+            logger.warning("Feed provider failed for %s: %s", key, exc)
+            skipped.append(key)
             continue
         try:
             price = await client.get_midpoint_price(condition_id, token_id)
@@ -325,20 +363,20 @@ async def run_signal_feed_once(
                     condition_id, token_id, side="BUY"
                 )
         except Exception as exc:
-            logger.warning("Feed price fetch failed for %s: %s", icao, exc)
-            skipped.append(icao)
+            logger.warning("Feed price fetch failed for %s: %s", key, exc)
+            skipped.append(key)
             continue
         signal = target._signal_ingestor.ingest_forecast_gap(
-            icao, model_p, price, city=city, edge_threshold=edge
+            key, model_p, price, city=city, edge_threshold=edge
         )
         if signal is None:
-            skipped.append(icao)
+            skipped.append(key)
             continue
         signals += 1
         try:
             order = await target.process_signal(signal)
         except Exception as exc:
-            logger.warning("Feed process_signal failed for %s: %s", icao, exc)
+            logger.warning("Feed process_signal failed for %s: %s", key, exc)
             continue
         if order is not None and order.state.value in ("OPEN", "MATCHED"):
             orders += 1

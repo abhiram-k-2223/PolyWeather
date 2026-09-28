@@ -41,24 +41,63 @@ _STRIKE_RE = re.compile(
 )
 
 
-def parse_temp_strike(question: str) -> Optional[tuple[float, str]]:
+_BARE_STRIKE_RE = re.compile(
+    r"(?P<val>\d+(?:\.\d+)?)\s?(?:°|degrees?)\s?(?P<unit>[CF])?",
+    re.IGNORECASE,
+)
+_TRAIL_DIR_RE = re.compile(
+    rf"(?:or\s+)?(?P<dir>{_ABOVE_WORDS}|{_BELOW_WORDS})\b",
+    re.IGNORECASE,
+)
+_HIGH_RE = re.compile(r"highest|max(?:imum)?|\bhigh\b", re.IGNORECASE)
+_LOW_RE = re.compile(r"lowest|min(?:imum)?|\blow\b", re.IGNORECASE)
+
+
+def _dir_word(word: str) -> str:
+    return "above" if re.fullmatch(_ABOVE_WORDS, word, re.IGNORECASE) else "below"
+
+
+def parse_temp_strike(
+    question: str, title: str = ""
+) -> Optional[tuple[float, str]]:
     """Parse (strike_°F, direction) from a market question.
 
     Direction is "above" or "below". Returns None when the question
     carries no recognizable temperature strike.
+
+    Handles both the explicit form ("above 75°F") and the live Gamma
+    form where the strike stands bare ("be 19°C") and direction is
+    implied by Highest/Lowest in the question or event title — with an
+    explicit trailing direction word ("18°C or below") winning over
+    title inference.
     """
     if not question:
         return None
     match = _STRIKE_RE.search(question)
-    if not match:
+    if match:
+        value = float(match.group("val"))
+        unit = (match.group("unit") or "F").upper()
+        if unit == "C":
+            value = value * 9.0 / 5.0 + 32.0
+        return (value, _dir_word(match.group("dir")))
+    bare = _BARE_STRIKE_RE.search(question)
+    if not bare:
         return None
-    value = float(match.group("val"))
-    unit = (match.group("unit") or "F").upper()
+    value = float(bare.group("val"))
+    unit = (bare.group("unit") or "F").upper()
     if unit == "C":
         value = value * 9.0 / 5.0 + 32.0
-    word = match.group("dir").lower()
-    direction = "above" if re.fullmatch(_ABOVE_WORDS, word, re.IGNORECASE) else "below"
-    return (value, direction)
+    trailing = _TRAIL_DIR_RE.search(question[bare.end():])
+    if trailing:
+        return (value, _dir_word(trailing.group("dir")))
+    context = f"{question} {title or ''}"
+    high = bool(_HIGH_RE.search(context))
+    low = bool(_LOW_RE.search(context))
+    if high and not low:
+        return (value, "above")
+    if low and not high:
+        return (value, "below")
+    return None
 
 
 def spread_sigma(p10: float, p90: float) -> float:
@@ -148,8 +187,18 @@ async def openmeteo_probability(
     and ``ensemble`` are injectable for tests; production defaults
     construct a GammaClient and hit the Open-Meteo ensemble API.
     """
-    del city, token_id  # coords come from ICAO; payout prob is strike-based.
+    del token_id  # payout prob is strike-based; coords resolved below.
     coords = FEED_CITY_COORDS.get(icao)
+    if coords is None:
+        # Global feed keys are city slugs ("tokyo"), not ICAOs — resolve
+        # via the discovery city table by key only. An unknown key stays
+        # unresolved (skip) even when a display name is present:
+        # unconfigured keys must never trade.
+        from src.trading.signals.temperature_discovery import CITY_COORDS
+
+        hit = CITY_COORDS.get((icao or "").lower())
+        if hit is not None:
+            coords = (hit[1], hit[2])
     if coords is None:
         return None
     try:

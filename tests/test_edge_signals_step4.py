@@ -207,3 +207,26 @@ def test_maintenance_tick_includes_feed(monkeypatch):
         )
     )
     assert out["feed"]["orders"] == 1
+
+
+def test_feed_covers_discovered_slugs_without_env_allowlist(monkeypatch):
+    import web.services.trading_api as tapi
+
+    monkeypatch.delenv("POLY_TRADING_FEED_CITIES", raising=False)
+    eng = TradingEngine(
+        wallet=None, config=EngineConfig(enabled=True, paper_mode=True)
+    )
+    eng.update_market_map({"tokyo": ("tok-c", "tok-t")})
+    seen = []
+
+    def _prov(icao, city, cond, tok):
+        seen.append((icao, city, cond, tok))
+        return 0.70
+
+    out = asyncio.run(
+        tapi.run_signal_feed_once(
+            engine=eng, client=_FeedGamma(price=0.05), probability_provider=_prov
+        )
+    )
+    assert out["signals"] == 1 and out["orders"] == 1
+    assert seen[0][0] == "tokyo"

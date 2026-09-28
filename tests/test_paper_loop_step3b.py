@@ -201,3 +201,26 @@ def test_production_work_reuses_single_open_loop(monkeypatch):
     assert loops[0] is loops[1]
     assert not loops[0].is_closed()
     loop.close()
+
+
+def test_refresh_merges_keyword_discovery():
+    import web.services.trading_api as tapi
+    from src.trading.polymarket.gamma_client import GammaEvent
+
+    eng = _engine()
+    tok = _market("tok-c", ["tok-t"], closed=False)
+    tok.question = "Will the highest temperature in Tokyo be 19°C on September 29?"
+    tok.volume = 500.0
+    ev = GammaEvent(
+        event_slug="s",
+        title="Highest temperature in Tokyo on September 29?",
+        markets=[tok],
+    )
+
+    class _C(_AsyncGamma):
+        async def search_events(self, query, limit=25, page=1):
+            return [ev]
+
+    got = asyncio.run(tapi.refresh_market_map_from_gamma(client=_C(), engine=eng))
+    assert got.get("tokyo") == ("tok-c", "tok-t")
+    assert eng._signal_ingestor.get_condition_id("tokyo") == "tok-c"

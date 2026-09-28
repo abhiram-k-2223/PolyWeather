@@ -261,3 +261,59 @@ def test_production_tick_wires_default_provider(monkeypatch):
     assert provider is not None
     assert getattr(provider, "__name__", "") == "openmeteo_probability"
     assert provider.__module__.endswith("openmeteo_probability")
+
+
+def test_parse_live_gamma_question_forms():
+    from src.trading.signals.openmeteo_probability import parse_temp_strike
+
+    # Live form: direction implied by Highest/Lowest in question/title.
+    strike, direction = parse_temp_strike(
+        "Will the highest temperature in Tokyo be 19°C on September 29?",
+        "Highest temperature in Tokyo on September 29?",
+    )
+    assert direction == "above" and strike == round(19 * 9 / 5 + 32, 6)
+    strike, direction = parse_temp_strike(
+        "Will the lowest temperature in Tokyo be 15°C or below on September 29?",
+        "Lowest temperature in Tokyo on September 29?",
+    )
+    assert direction == "below"
+    # Trailing direction word wins over title inference.
+    _, direction = parse_temp_strike(
+        "Will the highest temperature in Tokyo be 18°C or below on September 28?",
+        "Highest temperature in Tokyo on September 28?",
+    )
+    assert direction == "below"
+    # No temperature clause at all -> None.
+    assert parse_temp_strike("Will West Nile cases in NYC rise?", "") is None
+    # Legacy explicit forms still parse.
+    assert parse_temp_strike("Will it go above 75°F?", "") == (75.0, "above")
+
+
+def test_provider_resolves_coords_by_city_slug():
+    from src.trading.signals.openmeteo_probability import openmeteo_probability
+
+    q = "Will the highest temperature in Tokyo be 19°C on September 29?"
+    p = asyncio.run(
+        openmeteo_probability(
+            "tokyo",
+            "Tokyo",
+            "c1",
+            "t1",
+            gamma_client=_QueryGamma(q),
+            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+        )
+    )
+    assert p is not None and p > 0.9
+    # Unknown key stays unresolved even with a known display name:
+    # unconfigured keys must never trade.
+    p2 = asyncio.run(
+        openmeteo_probability(
+            "XXXX",
+            "Tokyo",
+            "c1",
+            "t1",
+            gamma_client=_QueryGamma(q),
+            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+        )
+    )
+    assert p2 is None
