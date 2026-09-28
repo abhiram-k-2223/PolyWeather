@@ -86,6 +86,53 @@ def _ensemble(median=80.0, p10=77.0, p90=83.0, members=21):
     return _fetch
 
 
+class _QueryGamma:
+    """Mirrors the real GammaClient query interface: /markets?condition_ids=.
+
+    The path-param /markets/{condition_id} lookup 422s live, so the
+    provider must use this query form.
+    """
+
+    def __init__(self, question):
+        self.question = question
+        self.seen_condition_ids = None
+
+    async def get_markets(self, condition_ids=None):
+        from src.trading.polymarket.gamma_client import GammaMarket
+
+        self.seen_condition_ids = list(condition_ids or [])
+        return [
+            GammaMarket(
+                condition_id=(condition_ids or [""])[0],
+                clob_token_ids=["t1", "t2"],
+                question=self.question,
+                description="",
+                volume=100.0,
+                liquidity=50.0,
+                active=True,
+                closed=False,
+                end_date_iso="",
+                neg_risk=False,
+            )
+        ]
+
+
+def test_provider_uses_condition_ids_query_not_path_lookup():
+    stub = _QueryGamma("NYC high above 75°F today?")
+    p = asyncio.run(
+        openmeteo_probability(
+            "KLGA",
+            "new york",
+            "c1",
+            "t1",
+            gamma_client=stub,
+            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+        )
+    )
+    assert stub.seen_condition_ids == ["c1"]
+    assert p is not None and p > 0.9
+
+
 def test_provider_above_strike_below_median_high_prob():
     p = asyncio.run(
         openmeteo_probability(

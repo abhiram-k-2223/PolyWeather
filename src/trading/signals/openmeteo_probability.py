@@ -157,7 +157,16 @@ async def openmeteo_probability(
             from ..polymarket.gamma_client import GammaClient
 
             gamma_client = GammaClient()
-        market = await gamma_client.get_market(condition_id)
+        market = None
+        get_markets = getattr(gamma_client, "get_markets", None)
+        if callable(get_markets):
+            # Condition-ID lookup via /markets?condition_ids= — the
+            # /markets/{condition_id} path form 422s live (Gamma expects a
+            # market slug there).
+            found = await get_markets(condition_ids=[condition_id])
+            market = found[0] if found else None
+        else:
+            market = await gamma_client.get_market(condition_id)
         if market is None or not getattr(market, "question", ""):
             return None
         parsed = parse_temp_strike(market.question)
