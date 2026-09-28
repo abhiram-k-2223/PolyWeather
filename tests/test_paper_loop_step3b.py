@@ -166,3 +166,36 @@ def test_start_and_stop_loop_runs_tick():
         tapi.stop_paper_loop()
     time.sleep(0.05)
     assert tapi._PAPER_LOOP_THREAD is None
+
+
+def test_production_work_reuses_single_open_loop(monkeypatch):
+    """Two production ticks must share one open event loop.
+
+    Regression: production_tick() used asyncio.run per tick, so the
+    get_shared_client() httpx singleton bound to tick N's loop and
+    every later tick failed with "Event loop is closed".
+    """
+    import web.services.trading_api as tapi
+
+    loops = []
+
+    async def _fake_maintenance(**kwargs):
+        loops.append(asyncio.get_running_loop())
+        return {"market_map": {}, "feed": {}, "settled_tokens": []}
+
+    monkeypatch.setattr(tapi, "run_paper_maintenance_once", _fake_maintenance)
+    try:
+        previous = asyncio.get_event_loop()
+    except RuntimeError:
+        previous = None
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        tapi._production_work()
+        tapi._production_work()
+    finally:
+        asyncio.set_event_loop(previous)
+    assert len(loops) == 2
+    assert loops[0] is loops[1]
+    assert not loops[0].is_closed()
+    loop.close()

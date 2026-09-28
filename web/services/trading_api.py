@@ -391,10 +391,33 @@ def production_tick() -> Any:
 
     Wires the Open-Meteo Gaussian probability provider into the signal
     feed so the loop trades edge (not placeholders) in paper mode.
+
+    One-shot helper (fresh ``asyncio.run`` loop per call): safe for a
+    single manual invocation, but NOT for repeated ticks — the shared
+    httpx client binds to the first call's loop, so a second call fails
+    with "Event loop is closed". The maintenance thread uses
+    :func:`_production_work` on a persistent loop instead.
     """
     from src.trading.signals.openmeteo_probability import openmeteo_probability
 
     return asyncio.run(
+        run_paper_maintenance_once(probability_provider=openmeteo_probability)
+    )
+
+
+def _production_work() -> Any:
+    """Run one production tick on this thread's persistent event loop.
+
+    Must be called from the paper-maintenance thread (see
+    :func:`start_paper_loop`), which owns a single long-lived loop.
+    Sharing one open loop across ticks keeps the ``get_shared_client()``
+    singleton bound to a live loop — repeated ``asyncio.run`` calls
+    would strand it on a closed loop.
+    """
+    from src.trading.signals.openmeteo_probability import openmeteo_probability
+
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(
         run_paper_maintenance_once(probability_provider=openmeteo_probability)
     )
 
@@ -416,14 +439,22 @@ def start_paper_loop(
         return True
     _PAPER_LOOP_STOP.clear()
     interval = interval_sec if interval_sec is not None else _paper_loop_interval_sec()
-    work = tick if tick is not None else production_tick
+    work = tick if tick is not None else _production_work
 
     def _loop() -> None:
-        while not _PAPER_LOOP_STOP.wait(interval):
-            try:
-                work()
-            except Exception:
-                logger.exception("Paper maintenance tick failed")
+        # One persistent loop for the thread's lifetime: the shared
+        # httpx client binds to whichever loop first uses it, so a
+        # fresh asyncio.run per tick would strand it on a closed loop.
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            while not _PAPER_LOOP_STOP.wait(interval):
+                try:
+                    work()
+                except Exception:
+                    logger.exception("Paper maintenance tick failed")
+        finally:
+            loop.close()
 
     thread = threading.Thread(target=_loop, name="paper-maintenance", daemon=True)
     thread.start()
