@@ -170,11 +170,13 @@ async def check_and_settle_closed_markets(
     """Settle open paper positions whose markets have closed (Step 3 loop).
 
     For each open paper position, fetch the market via
-    ``GammaClient.get_market(condition_id)`` and parse the outcome with
-    ``resolve_token_outcome()``. Resolved positions settle through
-    ``TradingEngine.settle_paper_position()`` (which feeds realized PnL
-    into the risk engine); unresolved markets and per-market fetch
-    failures are skipped so one bad market never blocks the loop.
+    ``get_markets(condition_ids=[...])`` and parse the outcome with
+    ``resolve_token_outcome()``. The ``/markets/{condition_id}`` path
+    form 422s live (Gamma expects a slug there), so the query form is
+    tried first with the path lookup as fallback. Resolved positions
+    settle through ``TradingEngine.settle_paper_position()`` (which feeds
+    realized PnL into the risk engine); unresolved markets and per-market
+    fetch failures are skipped so one bad market never blocks the loop.
     Returns the settled records.
     """
     from src.trading.polymarket.market_resolution import resolve_token_outcome
@@ -192,7 +194,13 @@ async def check_and_settle_closed_markets(
     settled: list = []
     for pos in list(store.get_open_positions()):
         try:
-            market = await client.get_market(pos.condition_id)
+            market = None
+            get_markets = getattr(client, "get_markets", None)
+            if callable(get_markets):
+                found = await get_markets(condition_ids=[pos.condition_id])
+                market = found[0] if found else None
+            else:
+                market = await client.get_market(pos.condition_id)
         except Exception as exc:
             logger.warning(
                 "Settlement check failed for %s: %s", pos.condition_id[:10], exc

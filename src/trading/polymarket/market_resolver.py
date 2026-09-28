@@ -18,13 +18,18 @@ Runbook
    refresh overwrites entries it resolves and leaves the rest alone.
 
 Selection rule (``pick_best_market_for_city``): skip inactive, closed, or
-token-less markets; pick the highest ``volume``; break ties by smallest
-``condition_id`` so the choice is deterministic.
+token-less markets; skip markets whose question carries no parseable
+temperature strike (volume alone once elected a disease market and the
+feed went silent — no strike ever parses from it); pick the highest
+``volume``; break ties by smallest ``condition_id`` so the choice is
+deterministic.
 """
 
 from __future__ import annotations
 
 from typing import Any, Optional
+
+from src.trading.signals.openmeteo_probability import parse_temp_strike
 
 #: Default paper-feed cities: ICAO -> city name used for the Gamma search.
 DEFAULT_FEED_CITIES: dict[str, str] = {
@@ -73,6 +78,8 @@ def pick_best_market_for_city(
         condition_id = str(getattr(market, "condition_id", "") or "")
         tokens = _market_tokens(market)
         if not condition_id or not tokens:
+            continue
+        if parse_temp_strike(str(getattr(market, "question", "") or "")) is None:
             continue
         vol = _market_volume(market)
         if vol > best_vol or (vol == best_vol and condition_id < best_cond):

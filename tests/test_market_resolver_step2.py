@@ -13,7 +13,11 @@ from src.trading.engine.signal_ingestion import WeatherObservationSnapshot
 from src.trading.engine.trading_engine import EngineConfig, TradingEngine
 
 
-def _market(cond, tokens, volume, active=True, closed=False, question=""):
+def _market(cond, tokens, volume, active=True, closed=False, question=None):
+    # Default models live data: Gamma always sends a question, and the
+    # resolver only resolves temperature markets (parseable strike).
+    if question is None:
+        question = "High above 70°F today?"
     return SimpleNamespace(
         condition_id=cond,
         clob_token_ids=list(tokens),
@@ -129,3 +133,27 @@ def test_feed_cities_defaults_to_three():
     import web.services.trading_api as tapi
 
     assert tapi._feed_cities({}) == {"KLGA": "new york", "KLAX": "los angeles", "KORD": "chicago"}
+
+
+def test_pick_best_market_requires_temp_strike():
+    """Volume must not elect a non-temperature market (live: a West Nile
+    disease market out-volumed the real temp markets and the feed went
+    silent because no strike parses from its question)."""
+    from src.trading.polymarket.market_resolver import pick_best_market_for_city
+
+    markets = [
+        _market(
+            "c-disease",
+            ["t-dis"],
+            9999.0,
+            question="Will New York report a West Nile virus case this week?",
+        ),
+        _market(
+            "c-temp",
+            ["t-tmp"],
+            12.0,
+            question="NYC high above 75°F today?",
+        ),
+    ]
+    assert pick_best_market_for_city("new york", markets) == ("c-temp", "t-tmp")
+    assert pick_best_market_for_city("new york", markets[:1]) is None

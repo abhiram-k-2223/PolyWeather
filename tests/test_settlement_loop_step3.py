@@ -154,15 +154,43 @@ def test_check_and_settle_skips_failed_market():
 
     ok_market = _market(["tokOK", "tokOther"], closed=True, outcomes=["1", "0"])
 
-    async def fake_get_market(condition_id: str):
-        if condition_id == "cond-tokOK":
-            return ok_market
+    async def fake_get_markets(condition_ids=None):
+        if (condition_ids or []) == ["cond-tokOK"]:
+            return [ok_market]
         raise RuntimeError("gamma down")
 
     client = AsyncMock()
-    client.get_market = fake_get_market
+    client.get_markets = fake_get_markets
     settled = asyncio.run(tapi.check_and_settle_closed_markets(eng, client))
     assert [r.token_id for r in settled] == ["tokOK"]
     assert settled[0].status == "SETTLED_WON"
     remaining = [r.token_id for r in eng._paper_store.get_open_positions()]
     assert remaining == ["tokFail"]
+
+
+def test_check_and_settle_uses_condition_ids_query():
+    """Settlement must resolve via /markets?condition_ids= — the
+    /markets/{condition_id} path form 422s live (same class as the Step 4
+    provider bug). A client exposing only get_markets must still settle."""
+    import web.services.trading_api as tapi
+
+    eng = _engine()
+    asyncio.run(eng.process_signal(_signal("tokQ")))
+    for r in eng._paper_store.get_open_positions():
+        r.condition_id = "cond-tokQ"
+
+    won_market = _market(["tokQ", "tokOther"], closed=True, outcomes=["1", "0"])
+    won_market.condition_id = "cond-tokQ"
+
+    seen: list = []
+
+    class _QueryOnly:
+        async def get_markets(self, condition_ids=None):
+            seen.append(list(condition_ids or []))
+            assert (condition_ids or []) == ["cond-tokQ"]
+            return [won_market]
+
+    settled = asyncio.run(tapi.check_and_settle_closed_markets(eng, _QueryOnly()))
+    assert seen == [["cond-tokQ"]]
+    assert [r.token_id for r in settled] == ["tokQ"]
+    assert settled[0].status == "SETTLED_WON"

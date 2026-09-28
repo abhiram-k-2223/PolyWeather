@@ -25,7 +25,9 @@ def _market(cond, tokens, *, closed=False, outcomes=None) -> GammaMarket:
     return GammaMarket(
         condition_id=cond,
         clob_token_ids=list(tokens),
-        question="q",
+        # Models live data: Gamma always sends a question, and the
+        # resolver only resolves temperature markets.
+        question="High above 70°F today?",
         description="d",
         volume=10.0,
         liquidity=5.0,
