@@ -119,7 +119,12 @@ async def fetch_ensemble_daily_max(
     *,
     http_get: Callable[..., Any] | None = None,
 ) -> Optional[dict[str, Any]]:
-    """Today's high median/p10/p90 across ensemble members.
+    """Today's high median/p10/p90 across ensemble members, in °C.
+
+    The ensemble API serves native Celsius only — ``temperature_unit``
+    is a forecast-API param and the ensemble endpoint 400s on it — so
+    no unit is requested and the returned spread is Celsius. Callers
+    must compare like-for-like (convert °F strikes to °C first).
 
     ``http_get`` is injectable for tests (async, takes url + params,
     returns a response with .raise_for_status()/.json()). Defaults to
@@ -141,7 +146,6 @@ async def fetch_ensemble_daily_max(
             "daily": "temperature_2m_max",
             "timezone": "auto",
             "forecast_days": 1,
-            "temperature_unit": "fahrenheit",
         },
     )
     resp.raise_for_status()
@@ -223,6 +227,9 @@ async def openmeteo_probability(
             logger.debug("Feed skip %s: unparseable strike %r", icao, market.question)
             return None
         strike_f, direction = parsed
+        # Ensemble spread is native °C; parse_temp_strike normalizes to
+        # °F, so convert the strike down for a like-for-like comparison.
+        strike_c = (strike_f - 32.0) * 5.0 / 9.0
         lat, lon = coords
         if ensemble is None:
             spread = await fetch_ensemble_daily_max(lat, lon)
@@ -236,7 +243,7 @@ async def openmeteo_probability(
             logger.debug("Feed skip %s: thin ensemble spread", icao)
             return None
         sigma = spread_sigma(float(spread["p10"]), float(spread["p90"]))
-        exceed = gauss_exceed_prob(float(spread["median"]), sigma, strike_f)
+        exceed = gauss_exceed_prob(float(spread["median"]), sigma, strike_c)
         prob = exceed if direction == "above" else 1.0 - exceed
         if not 0.0 < prob < 1.0 or prob != prob:  # NaN guard
             return None

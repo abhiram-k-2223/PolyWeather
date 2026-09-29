@@ -78,7 +78,7 @@ class _StubGamma:
         )
 
 
-def _ensemble(median=80.0, p10=77.0, p90=83.0, members=21):
+def _ensemble(median=26.7, p10=25.6, p90=27.8, members=21):
     async def _fetch(lat, lon):
         assert isinstance(lat, float) and isinstance(lon, float)
         return {"median": median, "p10": p10, "p90": p90, "members": members}
@@ -126,7 +126,7 @@ def test_provider_uses_condition_ids_query_not_path_lookup():
             "c1",
             "t1",
             gamma_client=stub,
-            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
         )
     )
     assert stub.seen_condition_ids == ["c1"]
@@ -141,7 +141,7 @@ def test_provider_above_strike_below_median_high_prob():
             "c1",
             "t1",
             gamma_client=_StubGamma("NYC high above 75°F today?"),
-            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
         )
     )
     assert p is not None and 0.0 < p < 1.0
@@ -156,7 +156,7 @@ def test_provider_below_direction_uses_cdf():
             "c1",
             "t1",
             gamma_client=_StubGamma("NYC high below 75°F today?"),
-            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
         )
     )
     assert p is not None and 0.0 < p < 1.0
@@ -205,20 +205,20 @@ def test_fetch_ensemble_member_format():
             return {
                 "daily": {
                     "time": ["2026-09-28"],
-                    "temperature_2m_max_member01": [80.0],
-                    "temperature_2m_max_member02": [77.0],
-                    "temperature_2m_max_member03": [83.0],
+                    "temperature_2m_max_member01": [26.7],
+                    "temperature_2m_max_member02": [25.6],
+                    "temperature_2m_max_member03": [27.8],
                 }
             }
 
     async def _get(url, params):
         seen["url"] = url
-        assert params["temperature_unit"] == "fahrenheit"
+        assert "temperature_unit" not in params
         return _Resp()
 
     out = asyncio.run(fetch_ensemble_daily_max(40.78, -73.87, http_get=_get))
     assert seen["url"].startswith("https://ensemble-api.open-meteo.com")
-    assert out == {"median": 80.0, "p10": 77.0, "p90": 83.0, "members": 3}
+    assert out == {"median": 26.7, "p10": 25.6, "p90": 27.8, "members": 3}
 
 
 def test_fetch_ensemble_nested_and_thin():
@@ -300,7 +300,7 @@ def test_provider_resolves_coords_by_city_slug():
             "c1",
             "t1",
             gamma_client=_QueryGamma(q),
-            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
         )
     )
     assert p is not None and p > 0.9
@@ -313,7 +313,51 @@ def test_provider_resolves_coords_by_city_slug():
             "c1",
             "t1",
             gamma_client=_QueryGamma(q),
-            ensemble=_ensemble(median=80.0, p10=77.0, p90=83.0),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
         )
     )
     assert p2 is None
+
+
+def test_ensemble_request_uses_native_celsius():
+    """Ensemble API 400s on temperature_unit=fahrenheit (forecast-only
+    param) — the request must not send it; spread comes back in °C."""
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "daily": {
+                    "temperature_2m_max_member01": [26.7],
+                    "temperature_2m_max_member02": [25.6],
+                    "temperature_2m_max_member03": [27.8],
+                }
+            }
+
+    seen = {}
+
+    async def _get(url, params):
+        seen.update(params)
+        return _Resp()
+
+    out = asyncio.run(fetch_ensemble_daily_max(40.78, -73.87, http_get=_get))
+    assert "temperature_unit" not in seen
+    assert out == {"median": 26.7, "p10": 25.6, "p90": 27.8, "members": 3}
+
+
+def test_fahrenheit_strike_vs_celsius_ensemble_like_for_like():
+    """°F strike (75°F = 23.9°C) vs °C ensemble spread must compare in
+    the same units: median 26.7°C well above the strike -> high prob."""
+    p = asyncio.run(
+        openmeteo_probability(
+            "KLGA",
+            "new york",
+            "c1",
+            "t1",
+            gamma_client=_QueryGamma("NYC high above 75°F today?"),
+            ensemble=_ensemble(median=26.7, p10=25.6, p90=27.8),
+        )
+    )
+    assert p is not None and p > 0.9
