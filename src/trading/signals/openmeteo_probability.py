@@ -146,6 +146,10 @@ async def fetch_ensemble_daily_max(
             "daily": "temperature_2m_max",
             "timezone": "auto",
             "forecast_days": 1,
+            # The Ensemble API rejects the default best_match model —
+            # an explicit ensemble model is required (verified live:
+            # icon_seamless returns memberNN keys).
+            "models": "icon_seamless",
         },
     )
     resp.raise_for_status()

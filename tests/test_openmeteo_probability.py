@@ -347,6 +347,27 @@ def test_ensemble_request_uses_native_celsius():
     assert out == {"median": 26.7, "p10": 25.6, "p90": 27.8, "members": 3}
 
 
+def test_ensemble_request_selects_explicit_model():
+    """Ensemble API 400s on the default best_match model — the request
+    must name a specific ensemble model (icon_seamless, global)."""
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"daily": {"temperature_2m_max_member01": [26.7]}}
+
+    seen = {}
+
+    async def _get(url, params):
+        seen.update(params)
+        return _Resp()
+
+    asyncio.run(fetch_ensemble_daily_max(40.78, -73.87, http_get=_get))
+    assert seen.get("models") == "icon_seamless"
+
+
 def test_fahrenheit_strike_vs_celsius_ensemble_like_for_like():
     """°F strike (75°F = 23.9°C) vs °C ensemble spread must compare in
     the same units: median 26.7°C well above the strike -> high prob."""
