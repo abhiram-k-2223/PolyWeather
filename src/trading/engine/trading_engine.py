@@ -363,6 +363,13 @@ class TradingEngine:
             metadata={
                 "order_local_id": order.local_id,
                 "signal_timestamp": signal.timestamp.isoformat(),
+                # Calibration audit trail (present when the feed gated
+                # this signal on a calibration bin).
+                **{
+                    k: meta[k]
+                    for k in ("raw_model_p", "calibrated", "calibration_n")
+                    if k in meta
+                },
             },
         )
         order.metadata = {

@@ -12,6 +12,7 @@ data/*.db
 data/*.db-*
 data/*.db.*
 data/*.json
+data/*.jsonl
 data/*backtest*.csv
 data/logs/
 data/historical/

@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import logging
 import os
 import threading
+from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from src.trading.engine import TradingEngine, EngineConfig, RiskConfig
@@ -235,8 +237,82 @@ async def check_and_settle_closed_markets(
             continue
         record = target.settle_paper_position(pos.token_id, won=won)
         if record is not None:
+            log_outcome(pos.condition_id, pos.token_id, won)
             settled.append(record)
     return settled
+
+
+# ------------------------------------------------------------------
+# Calibration gate (model evidence before edge)
+# ------------------------------------------------------------------
+
+
+def _prediction_log_path() -> str:
+    """JSONL log of feed predictions + settlement outcomes."""
+    return os.environ.get(
+        "POLY_PREDICTION_LOG", "data/prediction_log.jsonl"
+    )
+
+
+def _load_calibration_table() -> dict | None:
+    """Load the calibration table file, or None when unconfigured."""
+    path = os.environ.get("POLY_CALIBRATION_PATH", "").strip()
+    if not path:
+        return None
+    try:
+        with open(path) as fh:
+            table = json.load(fh)
+        if isinstance(table, dict) and isinstance(table.get("bins"), list):
+            return table
+    except (OSError, ValueError) as exc:
+        logger.warning("Calibration table unreadable at %s: %s", path, exc)
+    return None
+
+
+def _calibration_min_n() -> int:
+    """Minimum resolved outcomes per bin to trade on it (default 10)."""
+    try:
+        return max(1, int(os.environ.get("POLY_CALIBRATION_MIN_N", "10")))
+    except (TypeError, ValueError):
+        return 10
+
+
+def log_prediction(
+    condition_id: str,
+    token_id: str,
+    city_key: str,
+    model_p: float,
+    market_p: float,
+) -> None:
+    """Append a feed evaluation to the prediction log (best-effort)."""
+    try:
+        with open(_prediction_log_path(), "a") as fh:
+            fh.write(json.dumps({
+                "type": "prediction",
+                "condition_id": condition_id,
+                "token_id": token_id,
+                "city": city_key,
+                "model_p": model_p,
+                "market_p": market_p,
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }) + "\n")
+    except OSError as exc:
+        logger.debug("Prediction log write failed: %s", exc)
+
+
+def log_outcome(condition_id: str, token_id: str, won: bool) -> None:
+    """Append a resolved market outcome (best-effort)."""
+    try:
+        with open(_prediction_log_path(), "a") as fh:
+            fh.write(json.dumps({
+                "type": "outcome",
+                "condition_id": condition_id,
+                "token_id": token_id,
+                "outcome": 1 if won else 0,
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }) + "\n")
+    except OSError as exc:
+        logger.debug("Outcome log write failed: %s", exc)
 
 
 # ------------------------------------------------------------------
@@ -333,6 +409,10 @@ async def run_signal_feed_once(
     )
     market_map = target.config.city_to_market_map or {}
     edge = _edge_threshold()
+    from src.trading.signals.calibration import calibrated_gap
+
+    table = _load_calibration_table()
+    min_n = _calibration_min_n()
     signals = 0
     orders = 0
     skipped: list[str] = []
@@ -378,8 +458,27 @@ async def run_signal_feed_once(
             logger.warning("Feed price fetch failed for %s: %s", key, exc)
             skipped.append(key)
             continue
+        try:
+            price_f = float(price)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            skipped.append(key)
+            continue
+        if not 0.0 < price_f < 1.0:
+            skipped.append(key)
+            continue
+        log_prediction(condition_id, token_id, key, model_p, price_f)
+        cal = calibrated_gap(model_p, price_f, table, min_n)
+        if cal is None:
+            logger.info("Feed skip %s: thin calibration bin", key)
+            skipped.append(key)
+            continue
         signal = target._signal_ingestor.ingest_forecast_gap(
-            key, model_p, price, city=city, edge_threshold=edge
+            key, cal["p"], price, city=city, edge_threshold=edge,
+            metadata={
+                "raw_model_p": model_p,
+                "calibrated": cal["calibrated"],
+                "calibration_n": cal["n"],
+            },
         )
         if signal is None:
             skipped.append(key)
