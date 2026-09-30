@@ -530,17 +530,37 @@ async def run_paper_maintenance_once(
     """
     target = engine if engine is not None else get_engine()
     if target is None:
-        return {"market_map": {}, "feed": {"signals": 0, "orders": 0, "skipped": []}, "settled_tokens": []}
+        out: dict[str, Any] = {"market_map": {}, "feed": {"signals": 0, "orders": 0, "skipped": []}, "settled_tokens": []}
+        _record_last_tick(out)
+        return out
     market_map = await refresh_market_map_from_gamma(engine=target, client=client)
     feed = await run_signal_feed_once(
         engine=target, client=client, probability_provider=probability_provider
     )
     settled = await check_and_settle_closed_markets(engine=target, client=client)
-    return {
+    out = {
         "market_map": market_map,
         "feed": feed,
         "settled_tokens": [r.token_id for r in settled],
     }
+    _record_last_tick(out)
+    return out
+
+
+_LAST_TICK: dict[str, Any] | None = None
+
+
+def _record_last_tick(out: dict[str, Any]) -> None:
+    """Stamp the latest maintenance result for /api/paper/summary."""
+    global _LAST_TICK
+    from datetime import datetime, timezone
+
+    _LAST_TICK = {"at": datetime.now(timezone.utc).isoformat(), **out}
+
+
+def get_last_tick() -> dict[str, Any] | None:
+    """Return the most recent maintenance-tick result (None before tick 1)."""
+    return _LAST_TICK
 
 
 def production_tick() -> Any:

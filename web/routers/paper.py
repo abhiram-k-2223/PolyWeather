@@ -29,8 +29,13 @@ _ZERO_PAPER = {
 @router.get("/summary")
 async def paper_summary() -> dict[str, Any]:
     """Return paper mode, engine state, and aggregate paper P&L."""
-    from web.services.trading_api import _is_paper_mode, get_engine
+    from web.services.trading_api import (
+        _is_paper_mode,
+        get_engine,
+        get_last_tick,
+    )
 
+    last_tick = get_last_tick()
     engine = get_engine()
     if engine is None:
         return {
@@ -40,6 +45,7 @@ async def paper_summary() -> dict[str, Any]:
             "enabled": False,
             "stats": {},
             "paper": dict(_ZERO_PAPER),
+            "last_tick": last_tick,
         }
     status = engine.get_status()
     return {
@@ -49,4 +55,5 @@ async def paper_summary() -> dict[str, Any]:
         "enabled": bool(status.get("enabled", False)),
         "stats": dict(status.get("stats", {})),
         "paper": dict(status.get("paper", _ZERO_PAPER)),
+        "last_tick": last_tick,
     }
