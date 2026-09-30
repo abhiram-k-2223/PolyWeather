@@ -101,7 +101,7 @@ def test_kelly_sizing_positive_edge_and_zero_without():
 
 def test_portfolio_value_uses_paper_base_then_cached_cash():
     eng = _engine()
-    assert eng._estimate_portfolio_value() == 2000.0
+    assert eng._estimate_portfolio_value() == 200.0
     eng._cached_cash = 5000.0
     assert eng._estimate_portfolio_value() == 5000.0
 
