@@ -230,3 +230,75 @@ def test_feed_covers_discovered_slugs_without_env_allowlist(monkeypatch):
     )
     assert out["signals"] == 1 and out["orders"] == 1
     assert seen[0][0] == "tokyo"
+
+
+def test_feed_prefers_price_fetcher_over_client(monkeypatch):
+    """Explicit price_fetcher wins; the legacy gamma client must not be
+    touched (its /price endpoint 404s live)."""
+    import web.services.trading_api as tapi
+
+    class _Exploding:
+        async def get_midpoint_price(self, *a):
+            raise AssertionError("legacy price path touched")
+
+        async def get_best_price(self, *a, **k):
+            raise AssertionError("legacy price path touched")
+
+    async def _fetch(token_id):
+        assert token_id == "t-ny"
+        return 0.05
+
+    monkeypatch.setenv("POLY_TRADING_FEED_CITIES", "KLGA")
+    eng = _paper_engine()
+    out = asyncio.run(
+        tapi.run_signal_feed_once(
+            engine=eng,
+            client=_Exploding(),
+            price_fetcher=_fetch,
+            probability_provider=lambda icao, city, cond, tok: 0.70,
+        )
+    )
+    assert out["signals"] == 1 and out["orders"] == 1
+
+
+def test_feed_book_default_without_client(monkeypatch):
+    """Production default (no client) prices from the CLOB book, not the
+    dead gamma /price endpoint."""
+    import web.services.trading_api as tapi
+
+    async def _book(token_id):
+        assert token_id == "t-ny"
+        return 0.05
+
+    monkeypatch.setattr(tapi, "fetch_book_midpoint", _book)
+    monkeypatch.setenv("POLY_TRADING_FEED_CITIES", "KLGA")
+    eng = _paper_engine()
+    out = asyncio.run(
+        tapi.run_signal_feed_once(
+            engine=eng,
+            client=None,
+            probability_provider=lambda icao, city, cond, tok: 0.70,
+        )
+    )
+    assert out["signals"] == 1 and out["orders"] == 1
+
+
+def test_feed_fetcher_exception_skips_city(monkeypatch):
+    """A failing price fetch skips the city instead of killing the tick."""
+    import web.services.trading_api as tapi
+
+    async def _boom(token_id):
+        raise RuntimeError("book down")
+
+    monkeypatch.setenv("POLY_TRADING_FEED_CITIES", "KLGA")
+    eng = _paper_engine()
+    out = asyncio.run(
+        tapi.run_signal_feed_once(
+            engine=eng,
+            client=None,
+            price_fetcher=_boom,
+            probability_provider=lambda icao, city, cond, tok: 0.70,
+        )
+    )
+    assert out["signals"] == 0 and out["orders"] == 0
+    assert out["skipped"] == ["KLGA"]

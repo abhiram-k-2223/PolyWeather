@@ -382,3 +382,73 @@ def test_fahrenheit_strike_vs_celsius_ensemble_like_for_like():
         )
     )
     assert p is not None and p > 0.9
+
+
+def test_ensemble_min_variable_requested():
+    """stat='min' must request temperature_2m_min (lowest markets need
+    the daily LOW ensemble, not the high)."""
+    seen = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {
+                "daily": {
+                    "time": ["2026-09-30"],
+                    "temperature_2m_min_member01": [4.0],
+                    "temperature_2m_min_member02": [3.0],
+                    "temperature_2m_min_member03": [5.0],
+                }
+            }
+
+    async def _get(url, params):
+        seen["daily"] = params.get("daily")
+        return _Resp()
+
+    out = asyncio.run(fetch_ensemble_daily_max(40.78, -73.87, stat="min", http_get=_get))
+    assert seen["daily"] == "temperature_2m_min"
+    assert out == {"median": 4.0, "p10": 3.0, "p90": 5.0, "members": 3}
+
+
+def test_below_market_uses_min_ensemble_above_uses_max(monkeypatch):
+    """Provider must route lowest-markets to the min ensemble and
+    highest-markets to the max ensemble (like-for-like variable)."""
+    import importlib
+
+    omp = importlib.import_module("src.trading.signals.openmeteo_probability")
+
+    calls = []
+
+    async def _fake_fetch(lat, lon, **kw):
+        calls.append(kw.get("stat", "max"))
+        return {"median": 4.0, "p10": 3.0, "p90": 5.0, "members": 21}
+
+    monkeypatch.setattr(omp, "fetch_ensemble_daily_max", _fake_fetch)
+    low = asyncio.run(
+        openmeteo_probability(
+            "tokyo",
+            "Tokyo",
+            "c-low",
+            "t-low",
+            gamma_client=_QueryGamma(
+                "Will the lowest temperature in Tokyo be 5°C on September 30?"
+            ),
+            ensemble=None,
+        )
+    )
+    high = asyncio.run(
+        openmeteo_probability(
+            "tokyo",
+            "Tokyo",
+            "c-high",
+            "t-high",
+            gamma_client=_QueryGamma(
+                "Will the highest temperature in Tokyo be 25°C on September 30?"
+            ),
+            ensemble=None,
+        )
+    )
+    assert calls == ["min", "max"]
+    assert low is not None and high is not None

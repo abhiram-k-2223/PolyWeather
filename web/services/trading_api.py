@@ -19,6 +19,7 @@ from src.trading.engine.signal_ingestion import (
     TradeSignal,
     WeatherObservationSnapshot,
 )
+from src.trading.polymarket.clob_book import fetch_book_midpoint
 from src.trading.polymarket.wallet import PolyWalletConfig, WalletManager
 from src.trading.storage.trade_store import TradeStore
 
@@ -278,15 +279,23 @@ async def run_signal_feed_once(
     engine: TradingEngine | None = None,
     client: Any | None = None,
     probability_provider: Callable[..., Any] | None = None,
+    price_fetcher: Callable[..., Any] | None = None,
 ) -> dict[str, Any]:
     """One signal-feed tick: edge-gated model-vs-market signals -> orders.
 
-    For each feed city with a mapped market, fetch the live YES midpoint
-    price, ask ``probability_provider(icao, city, condition_id, token_id)``
+    For each feed city with a mapped market, fetch the live YES price,
+    ask ``probability_provider(icao, city, condition_id, token_id)``
     for the model probability (0–1, None/NaN to skip), and emit a signal
     via ``SignalIngestor.ingest_forecast_gap`` — BUY only when
     ``model_p - market_price > edge_threshold``. Signals flow through
     ``TradingEngine.process_signal`` (risk + Kelly sizing unchanged).
+
+    Pricing: ``price_fetcher(token_id)`` (sync or awaitable) wins when
+    given; otherwise the CLOB public ``/book`` midpoint is the default.
+    The legacy ``client`` gamma path (``get_midpoint_price`` /
+    ``get_best_price``) is kept for back-compat test doubles only — the
+    gamma ``/price`` endpoint 404s on every request live, so production
+    (``client=None``) always prices from the book.
 
     Gating: the engine must be enabled; live (non-paper) engines additionally
     require POLY_LIVE_SIGNALS=1 — otherwise the tick is a no-op. With no
@@ -313,10 +322,6 @@ async def run_signal_feed_once(
     if probability_provider is None:
         logger.info("Signal feed idle: no probability provider configured")
         return {"signals": 0, "orders": 0, "skipped": []}
-    if client is None:
-        from src.trading.polymarket.gamma_client import GammaClient
-
-        client = GammaClient()
     from src.trading.signals.temperature_discovery import CITY_COORDS
 
     legacy_names = _feed_cities()
@@ -357,11 +362,18 @@ async def run_signal_feed_once(
             skipped.append(key)
             continue
         try:
-            price = await client.get_midpoint_price(condition_id, token_id)
-            if price is None:
-                price = await client.get_best_price(
-                    condition_id, token_id, side="BUY"
-                )
+            if price_fetcher is not None:
+                price = price_fetcher(token_id)
+            elif client is not None:
+                price = await client.get_midpoint_price(condition_id, token_id)
+                if price is None:
+                    price = await client.get_best_price(
+                        condition_id, token_id, side="BUY"
+                    )
+            else:
+                price = await fetch_book_midpoint(token_id)
+            if inspect.isawaitable(price):
+                price = await price
         except Exception as exc:
             logger.warning("Feed price fetch failed for %s: %s", key, exc)
             skipped.append(key)

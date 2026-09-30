@@ -117,9 +117,15 @@ async def fetch_ensemble_daily_max(
     lat: float,
     lon: float,
     *,
+    stat: str = "max",
     http_get: Callable[..., Any] | None = None,
 ) -> Optional[dict[str, Any]]:
-    """Today's high median/p10/p90 across ensemble members, in °C.
+    """Today's high (or low) median/p10/p90 across ensemble members, in °C.
+
+    ``stat`` selects the variable: ``"max"`` (default) requests
+    ``temperature_2m_max`` for highest-markets, ``"min"`` requests
+    ``temperature_2m_min`` for lowest-markets — comparing a low strike
+    against the high ensemble (or vice versa) is apples-to-oranges.
 
     The ensemble API serves native Celsius only — ``temperature_unit``
     is a forecast-API param and the ensemble endpoint 400s on it — so
@@ -138,12 +144,13 @@ async def fetch_ensemble_daily_max(
         async def http_get(url: str, params: dict[str, Any]) -> Any:  # type: ignore[no-redef]
             return await shared.get(url, params=params)
 
+    variable = "temperature_2m_min" if stat == "min" else "temperature_2m_max"
     resp = await http_get(
         _ENSEMBLE_URL,
         {
             "latitude": lat,
             "longitude": lon,
-            "daily": "temperature_2m_max",
+            "daily": variable,
             "timezone": "auto",
             "forecast_days": 1,
             # The Ensemble API rejects the default best_match model —
@@ -156,11 +163,11 @@ async def fetch_ensemble_daily_max(
     daily = (resp.json() or {}).get("daily", {})
     highs: list[float] = []
     for key, values in daily.items():
-        if key.startswith("temperature_2m_max") and key != "temperature_2m_max":
+        if key.startswith(variable) and key != variable:
             if values and values[0] is not None:
                 highs.append(float(values[0]))
     if not highs:
-        raw = daily.get("temperature_2m_max", [])
+        raw = daily.get(variable, [])
         if raw and isinstance(raw, list):
             if isinstance(raw[0], list):
                 highs = [float(m[0]) for m in raw if m and m[0] is not None]
@@ -236,7 +243,11 @@ async def openmeteo_probability(
         strike_c = (strike_f - 32.0) * 5.0 / 9.0
         lat, lon = coords
         if ensemble is None:
-            spread = await fetch_ensemble_daily_max(lat, lon)
+            # Lowest-markets resolve on the daily LOW: fetch the min
+            # ensemble so the Gaussian compares like-for-like.
+            spread = await fetch_ensemble_daily_max(
+                lat, lon, stat="min" if direction == "below" else "max"
+            )
         else:
             spread = ensemble(lat, lon)
             if hasattr(spread, "__await__"):
